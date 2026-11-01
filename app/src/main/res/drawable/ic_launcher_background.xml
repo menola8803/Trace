@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mörk karta med kust och vägar -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:pathData="M0,0h108v108h-108z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="0" android:startY="0" android:endX="108" android:endY="108">
+                <item android:offset="0" android:color="#FF123A52" />
+                <item android:offset="1" android:color="#FF081A27" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:fillColor="#0E3046" android:pathData="M0,70 C18,62 30,76 48,70 C64,64 70,80 86,78 C96,77 102,72 108,70 L108,108 L0,108 Z" />
+    <path android:fillColor="#0E3046" android:pathData="M60,0 C58,14 70,22 74,34 C78,46 92,48 108,46 L108,0 Z" />
+    <path android:strokeColor="#1B4A66" android:strokeWidth="1.1" android:strokeLineCap="round" android:pathData="M0,30 L46,38 L108,24" />
+    <path android:strokeColor="#1B4A66" android:strokeWidth="1.1" android:strokeLineCap="round" android:pathData="M22,0 L30,108" />
+    <path android:strokeColor="#1B4A66" android:strokeWidth="1.1" android:strokeLineCap="round" android:pathData="M0,88 L60,92 L108,100" />
+    <path android:strokeColor="#1B4A66" android:strokeWidth="1.1" android:strokeLineCap="round" android:pathData="M84,0 L78,108" />
+</vector>

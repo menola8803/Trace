@@ -26,6 +26,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.text.buildSpannedString
 import androidx.core.text.color
 import androidx.core.view.ViewCompat
@@ -129,6 +130,7 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri -> uri?.let(::runExport) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
 
         Configuration.getInstance().apply {
@@ -315,7 +317,7 @@ class MainActivity : ComponentActivity() {
                     1 -> downloadSweden()
                     2 -> editApiKey()
                     3 -> if (!importing) importLauncher.launch(arrayOf("*/*"))
-                    4 -> exportLauncher.launch("cellkarta-logg.csv")
+                    4 -> exportLauncher.launch("trace-logg.csv")
                 }
                 true
             }

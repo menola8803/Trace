@@ -76,7 +76,7 @@ class CellListActivity : ComponentActivity() {
             applyFilter()
         }
         findViewById<Button>(R.id.btnExportCells).setOnClickListener {
-            exportLauncher.launch("cellkarta-celler.csv")
+            exportLauncher.launch("trace-celler.csv")
         }
 
         val root = findViewById<View>(R.id.cellsRoot)

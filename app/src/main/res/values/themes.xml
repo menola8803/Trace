@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Startskärm: mörk karta med Trace-symbolen i mitten -->
+    <style name="Theme.Trace.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/trace_night</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/trace_sea</item>
+        <item name="windowSplashScreenAnimationDuration">600</item>
+        <item name="postSplashScreenTheme">@style/AppTheme</item>
+    </style>
 </resources>

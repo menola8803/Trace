@@ -118,6 +118,15 @@
                     android:text="Claes Sundman S.N.C AB"
                     android:textColor="#2C2C2A"
                     android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="For learning purpose only"
+                    android:textColor="#5F5E5A"
+                    android:textSize="13sp"
+                    android:textStyle="italic" />
             </LinearLayout>
 
             <View

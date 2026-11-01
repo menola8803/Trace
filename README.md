@@ -1,4 +1,6 @@
-# Cellkarta
+# Trace
+
+*For learning purpose only.* Utvecklare: Claes Sundman S.N.C AB.
 
 Android-app som loggar vilka mobilmaster telefonen hör, ritar ut dem på OpenStreetMap
 och varnar för tre sorters avvikelser:

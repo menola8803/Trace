@@ -47,7 +47,7 @@ class Notifier(private val ctx: Context) {
     fun ongoing(): Notification =
         NotificationCompat.Builder(ctx, CH_ONGOING)
             .setSmallIcon(R.drawable.ic_cell)
-            .setContentTitle("Cellkarta")
+            .setContentTitle("Trace")
             .setContentText("Loggar celler och letar efter avvikelser")
             .setOngoing(true)
             .setContentIntent(openApp())

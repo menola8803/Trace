@@ -44,7 +44,7 @@ object UpdateChecker {
             connectTimeout = 15_000
             readTimeout = 15_000
             setRequestProperty("Accept", "application/vnd.github+json")
-            setRequestProperty("User-Agent", "Cellkarta")
+            setRequestProperty("User-Agent", "Trace")
         }
         try {
             when (val code = conn.responseCode) {

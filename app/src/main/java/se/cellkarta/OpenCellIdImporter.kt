@@ -60,7 +60,7 @@ object OpenCellIdImporter {
                 connectTimeout = 20_000
                 readTimeout = 60_000
                 instanceFollowRedirects = true
-                setRequestProperty("User-Agent", "Cellkarta/0.1 (Android)")
+                setRequestProperty("User-Agent", "Trace/0.1 (Android)")
             }
             try {
                 val code = conn.responseCode

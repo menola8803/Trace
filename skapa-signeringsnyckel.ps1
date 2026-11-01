@@ -1,4 +1,4 @@
-# Skapar en signeringsnyckel för release-versionen av Cellkarta (Windows).
+# Skapar en signeringsnyckel för release-versionen av Trace (Windows).
 # Kör i PowerShell:  powershell -ExecutionPolicy Bypass -File .\skapa-signeringsnyckel.ps1
 # Nyckeln och lösenordet sparas lokalt och är undantagna från git.
 $ErrorActionPreference = "Stop"
@@ -61,7 +61,7 @@ $pass = -join ($bytes | ForEach-Object { $chars[$_ % $chars.Length] })
     -keystore $keystore -storetype PKCS12 `
     -alias $alias -keyalg RSA -keysize 4096 -validity 10000 `
     -storepass $pass -keypass $pass `
-    -dname "CN=Cellkarta, O=Privat, C=SE" | Out-Null
+    -dname "CN=Trace, O=Privat, C=SE" | Out-Null
 
 @"
 storeFile=$keystore

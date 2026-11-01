@@ -53,21 +53,21 @@ jobs:
         run: gradle --no-daemon "$TASK"
 
       - name: Döp om APK
-        run: cp "$APK" Cellkarta.apk
+        run: cp "$APK" Trace.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Cellkarta-apk
-          path: Cellkarta.apk
+          name: Trace-apk
+          path: Trace.apk
 
       - name: Publicera som nedladdning
         env:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ github.run_number }}
         run: |
-          NOTES=$(printf 'Version: 0.1.%s\nBuild: %s\nSignerad med fast nyckel: %s\n\nÖppna den här sidan på telefonen, ladda ner Cellkarta.apk och installera.\nByggd från %s.' "$RUN" "$RUN" "$SIGNED" "${GITHUB_SHA::7}")
+          NOTES=$(printf 'Version: 0.1.%s\nBuild: %s\nSignerad med fast nyckel: %s\n\nÖppna den här sidan på telefonen, ladda ner Trace.apk och installera.\nByggd från %s.' "$RUN" "$RUN" "$SIGNED" "${GITHUB_SHA::7}")
           gh release delete senaste --yes --cleanup-tag || true
-          gh release create senaste Cellkarta.apk \
+          gh release create senaste Trace.apk \
             --prerelease \
-            --title "Cellkarta 0.1.$RUN" \
+            --title "Trace 0.1.$RUN" \
             --notes "$NOTES"

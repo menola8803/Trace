@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Skapar en signeringsnyckel för release-versionen av Cellkarta (macOS och Linux).
+# Skapar en signeringsnyckel för release-versionen av Trace (macOS och Linux).
 # Nyckeln och lösenordet sparas lokalt och är undantagna från git.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -60,7 +60,7 @@ PASS="$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-28)"
   -keystore "$KEYSTORE" -storetype PKCS12 \
   -alias "$ALIAS" -keyalg RSA -keysize 4096 -validity 10000 \
   -storepass "$PASS" -keypass "$PASS" \
-  -dname "CN=Cellkarta, O=Privat, C=SE" >/dev/null
+  -dname "CN=Trace, O=Privat, C=SE" >/dev/null
 
 cat > keystore.properties <<EOF
 storeFile=$KEYSTORE
