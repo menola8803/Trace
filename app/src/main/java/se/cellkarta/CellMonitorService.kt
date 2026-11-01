@@ -92,11 +92,18 @@ class CellMonitorService : Service(), LocationListener {
 
     @SuppressLint("MissingPermission")
     private fun startLocationUpdates() {
-        if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            LiveStatus.note("GPS är avstängd. Slå på platstjänster.")
+        if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
+            !lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+        ) {
+            LiveStatus.note("Platstjänster är avstängda. Slå på Plats i snabbinställningarna.")
         }
         lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { lastLocation = it }
-        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5_000L, 10f, this, Looper.getMainLooper())
+        // minDistance 0: positionen uppdateras även när du står still, annars blir den för gammal.
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5_000L, 0f, this, Looper.getMainLooper())
+        // Nätverksposition som reserv inomhus, där GPS ofta inte når fram.
+        if (lm.allProviders.contains(LocationManager.NETWORK_PROVIDER)) {
+            lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10_000L, 0f, this, Looper.getMainLooper())
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -120,7 +127,10 @@ class CellMonitorService : Service(), LocationListener {
             loc.accuracy > MAX_ACCURACY_M ||
             System.currentTimeMillis() - loc.time > MAX_LOCATION_AGE_MS
         ) {
-            LiveStatus.note("Väntar på en tillräckligt exakt GPS-position…")
+            LiveStatus.note(
+                if (loc == null) "Väntar på position. Gå gärna närmare ett fönster eller ut."
+                else "Väntar på exaktare position (just nu ±${loc.accuracy.toInt()} m)…"
+            )
             return
         }
         try {
@@ -132,13 +142,20 @@ class CellMonitorService : Service(), LocationListener {
     }
 
     override fun onLocationChanged(location: Location) {
-        lastLocation = location
+        val last = lastLocation
+        val useIt = last == null ||
+            location.provider == LocationManager.GPS_PROVIDER ||
+            location.accuracy <= last.accuracy ||
+            location.time - last.time > 20_000L
+        if (useIt) lastLocation = location
     }
 
     // Behövs för Android 10, där metoderna saknar standardimplementation.
     override fun onProviderEnabled(provider: String) {}
     override fun onProviderDisabled(provider: String) {
-        LiveStatus.note("GPS är avstängd. Slå på platstjänster.")
+        if (provider == LocationManager.GPS_PROVIDER) {
+            LiveStatus.note("GPS är avstängd. Slå på Plats i snabbinställningarna.")
+        }
     }
     @Deprecated("Krävs på äldre Android")
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
