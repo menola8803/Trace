@@ -1,0 +1,145 @@
+package se.cellkarta
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.Service
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Bundle
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.telephony.CellInfo
+import android.telephony.TelephonyManager
+import android.util.Log
+import androidx.core.app.ServiceCompat
+import androidx.core.content.ContextCompat
+import java.util.concurrent.Executors
+
+/**
+ * Förgrundstjänst som läser av mobilnätet med jämna mellanrum,
+ * kopplar varje mätning till en GPS-position och skickar vidare till Detector.
+ */
+class CellMonitorService : Service(), LocationListener {
+
+    companion object {
+        /** Hur ofta cellerna läses av. Kortare intervall ger fler mätpunkter men drar mer batteri. */
+        const val INTERVAL_MS = 15_000L
+        const val MAX_ACCURACY_M = 100f
+        const val MAX_LOCATION_AGE_MS = 60_000L
+        private const val TAG = "Cellkarta"
+    }
+
+    private lateinit var tm: TelephonyManager
+    private lateinit var lm: LocationManager
+    private lateinit var notifier: Notifier
+    private lateinit var detector: Detector
+    private val handler = Handler(Looper.getMainLooper())
+    private val worker = Executors.newSingleThreadExecutor()
+    @Volatile private var lastLocation: Location? = null
+    private var started = false
+
+    private val tick = object : Runnable {
+        override fun run() {
+            scan()
+            handler.postDelayed(this, INTERVAL_MS)
+        }
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        tm = getSystemService(TelephonyManager::class.java)
+        lm = getSystemService(LocationManager::class.java)
+        notifier = Notifier(this)
+        detector = Detector(CellDb.get(this), notifier)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (!hasLocationPermission()) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        ServiceCompat.startForeground(
+            this, Notifier.ONGOING_ID, notifier.ongoing(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        )
+        if (!started) {
+            started = true
+            startLocationUpdates()
+            handler.post(tick)
+            LiveStatus.setRunning(true)
+        }
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacks(tick)
+        lm.removeUpdates(this)
+        worker.shutdown()
+        started = false
+        LiveStatus.setRunning(false)
+        super.onDestroy()
+    }
+
+    private fun hasLocationPermission() =
+        ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            LiveStatus.note("GPS är avstängd. Slå på platstjänster.")
+        }
+        lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { lastLocation = it }
+        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5_000L, 10f, this, Looper.getMainLooper())
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun scan() {
+        if (!hasLocationPermission()) return
+        try {
+            tm.requestCellInfoUpdate(worker, object : TelephonyManager.CellInfoCallback() {
+                override fun onCellInfo(cellInfo: MutableList<CellInfo>) = handle(cellInfo)
+                override fun onError(errorCode: Int, detail: Throwable?) = handle(null)
+            })
+        } catch (e: SecurityException) {
+            LiveStatus.note("Appen saknar behörighet till exakt plats.")
+        }
+    }
+
+    /** Körs på worker-tråden, så databasarbetet stör inte gränssnittet. */
+    @SuppressLint("MissingPermission")
+    private fun handle(fresh: List<CellInfo>?) {
+        val loc = lastLocation
+        if (loc == null ||
+            loc.accuracy > MAX_ACCURACY_M ||
+            System.currentTimeMillis() - loc.time > MAX_LOCATION_AGE_MS
+        ) {
+            LiveStatus.note("Väntar på en tillräckligt exakt GPS-position…")
+            return
+        }
+        try {
+            val list = fresh ?: tm.allCellInfo ?: emptyList()
+            detector.process(CellReader.parse(list), loc)
+        } catch (e: Exception) {
+            Log.w(TAG, "Mätningen misslyckades", e)
+        }
+    }
+
+    override fun onLocationChanged(location: Location) {
+        lastLocation = location
+    }
+
+    // Behövs för Android 10, där metoderna saknar standardimplementation.
+    override fun onProviderEnabled(provider: String) {}
+    override fun onProviderDisabled(provider: String) {
+        LiveStatus.note("GPS är avstängd. Slå på platstjänster.")
+    }
+    @Deprecated("Krävs på äldre Android")
+    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ikon för notiser: en enkel mast -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+        android:pathData="M12,4 L6.5,22 L8.6,22 L9.8,18 L14.2,18 L15.4,22 L17.5,22 Z M10.4,16 L12,10.6 L13.6,16 Z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M12,1.5a1.6,1.6 0 1,0 0.01,0 Z M5.2,3.4 L6.6,4.8 A7.5,7.5 0 0,0 6.6,9.2 L5.2,10.6 A9.5,9.5 0 0,1 5.2,3.4 Z M18.8,3.4 A9.5,9.5 0 0,1 18.8,10.6 L17.4,9.2 A7.5,7.5 0 0,0 17.4,4.8 Z" />
+</vector>

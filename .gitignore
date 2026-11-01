@@ -1,0 +1,21 @@
+# Gradle och Android Studio
+.gradle/
+build/
+/app/build/
+local.properties
+.idea/
+*.iml
+.cxx/
+captures/
+.externalNativeBuild/
+.DS_Store
+
+# Signeringsnyckel och lösenord: får aldrig hamna i git
+keystore.properties
+nycklar/
+*.jks
+*.keystore
+
+# Exporterade loggar och referensdata
+*.csv
+*.csv.gz

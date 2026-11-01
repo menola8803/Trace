@@ -1,0 +1,95 @@
+# Cellkarta
+
+Android-app som loggar vilka mobilmaster telefonen hör, ritar ut dem på OpenStreetMap
+och varnar för tre sorters avvikelser:
+
+- **Ny cell**: ett cell-ID som inte finns i OpenCellID:s databas och som appen aldrig sett förut.
+- **Rör sig**: samma cell-ID hörs på platser mer än 50 km isär inom ett dygn,
+  eller långt från sin registrerade position. Spåret ritas som en streckad röd linje med tidpunkter.
+- **Nedgradering**: telefonen går från 4G/5G ner till 3G eller 2G.
+
+Inget av detta bevisar att en IMSI-catcher finns i närheten. De flesta avvikelser har vanliga
+förklaringar, som nya master, ombyggnader i nätet eller mobila basstationer vid evenemang.
+
+## Bygga och installera
+
+1. Installera [Android Studio](https://developer.android.com/studio).
+2. Välj **File → Open** och öppna den här mappen. Vänta tills Gradle-synkningen är klar.
+3. Slå på utvecklaralternativ och USB-felsökning på telefonen
+   (Inställningar → Om telefonen → tryck sju gånger på Versionsnummer).
+4. Anslut telefonen och tryck på **Run**.
+
+Appen kräver Android 10 eller nyare. Den fungerar inte på iPhone.
+
+## Nycklar
+
+### OpenCellID-nyckel (referensdata)
+
+För att kunna avgöra vad som är en *ny* cell behöver appen veta vilka celler som redan finns.
+
+1. Skapa ett gratis konto på [opencellid.org](https://opencellid.org) och kopiera din API-nyckel.
+2. I appen: **Mer → OpenCellID-nyckel**, klistra in och tryck **Spara**.
+3. **Mer → Ladda ner Sverige från OpenCellID**. Appen hämtar alla svenska celler (MCC 240)
+   och lägger dem i den lokala databasen.
+
+Nyckeln sparas bara i appen på telefonen. Säkerhetskopiering är avstängd, så den följer inte
+med till molnet. OpenCellID begränsar antalet nedladdningar per dag.
+
+Har du redan laddat ner `240.csv.gz` själv kan du läsa in den med **Mer → Importera fil**.
+
+### Signeringsnyckel (release-APK)
+
+För att bygga en signerad release-version, till exempel för att installera appen utan
+Android Studio eller dela den med någon annan:
+
+- **macOS / Linux:** `./skapa-signeringsnyckel.sh`
+- **Windows:** `powershell -ExecutionPolicy Bypass -File .\skapa-signeringsnyckel.ps1`
+
+Skriptet skapar `nycklar/cellkarta-release.jks` och `keystore.properties` med ett slumpat
+lösenord. Gradle hittar dem automatiskt. Bygg sedan med **Build → Generate Signed App Bundle / APK**
+eller `./gradlew assembleRelease`.
+
+Båda filerna står i `.gitignore` och laddas aldrig upp till GitHub.
+**Säkerhetskopiera dem**, till exempel i en lösenordshanterare. Förlorar du nyckeln kan du inte
+släppa uppdateringar med samma signatur.
+
+## Sparade celler
+
+Varje cell-ID som telefonen hör sparas med tid, GPS-position och signalstyrka.
+Tryck på **Celler** för att se listan. Där kan du
+
+- söka på cell-ID,
+- filtrera på avvikelser, nya celler, celler som rör sig eller celler som saknas i referensdatan,
+- trycka på en cell för detaljer, kopiera dess ID eller visa den på kartan,
+- spara listan som CSV med **Spara listan**.
+
+Cell-ID:t har samma format som OpenCellID: `radio:mcc:mnc:område:cell`,
+till exempel `LTE:240:1:61003:12345678`.
+
+**Mer → Exportera mätlogg** sparar varje enskild mätning som CSV.
+
+## Justera känsligheten
+
+| Inställning | Fil | Standard |
+|---|---|---|
+| Avstånd för "rör sig" | `Detector.kt`, `MOVE_KM` | 50 km |
+| Hur ofta cellerna läses | `CellMonitorService.kt`, `INTERVAL_MS` | 15 s |
+| Kräv GPS-noggrannhet | `CellMonitorService.kt`, `MAX_ACCURACY_M` | 100 m |
+| Zoom där enskilda master visas | `MainActivity.kt`, `DETAIL_ZOOM` | 11 |
+
+Får du falsklarm om celler som rör sig i glesbygd, där master kan höras på långt håll,
+höj `MOVE_KM`.
+
+## Begränsningar
+
+- Appen ser bara det Android visar för vanliga appar. Den kan inte se om nätet begär ditt IMEI
+  eller stänger av krypteringen. Det kräver åtkomst till modemet.
+- Grannceller som saknar fullständigt ID hoppas över.
+- En telefon kan inte mäta var en antenn står. Positionen uppskattas från var du var när du hörde
+  cellen, viktat efter signalstyrkan.
+- GPS och avläsning var 15:e sekund drar batteri. Stoppa övervakningen när du inte behöver den.
+- Kartan använder OpenStreetMaps öppna kartplattor. Följ deras
+  [användarvillkor](https://operations.osmfoundation.org/policies/tiles/) och ladda inte ner stora
+  områden i förväg.
+
+Kartdata © OpenStreetMap-bidragsgivare. Celldata © OpenCellID, CC BY-SA 4.0.
