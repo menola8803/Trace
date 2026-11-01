@@ -23,6 +23,19 @@ Appen kräver Android 10 eller nyare. Den fungerar inte på iPhone.
 
 ## Nycklar
 
+### Git-nyckel (hämta och pusha från din dator)
+
+Kör skriptet på datorn du ska jobba från:
+
+- **Windows:** `powershell -ExecutionPolicy Bypass -File .\skapa-git-nyckel.ps1`
+- **macOS / Linux:** `./skapa-git-nyckel.sh`
+
+Skriptet skapar en SSH-nyckel i din hemmapp, kopierar den publika delen, öppnar
+GitHubs sida för nya nycklar och testar anslutningen när du har sparat den.
+Den privata nyckeln (`id_ed25519` utan ändelse) stannar på datorn och ska aldrig delas.
+
+Har du inte klonat repot än kan du ladda ner skriptet från GitHub och köra det fristående.
+
 ### OpenCellID-nyckel (referensdata)
 
 För att kunna avgöra vad som är en *ny* cell behöver appen veta vilka celler som redan finns.
