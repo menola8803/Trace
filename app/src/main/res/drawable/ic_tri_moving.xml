@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cell som rör sig -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp" android:height="26dp"
+    android:viewportWidth="26" android:viewportHeight="26">
+    <path android:fillColor="#C0392B" android:strokeColor="#FFFFFF" android:strokeWidth="2"
+        android:strokeLineJoin="round" android:pathData="M13,2.5 L24,23 L2,23 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M12,9.5 h2 v7 h-2 Z M11.8,19.2 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+</vector>

@@ -80,6 +80,8 @@ class MainActivity : ComponentActivity() {
 
         private val COLOR_KNOWN = Color.rgb(95, 94, 90)
         private val COLOR_NEW = Color.rgb(239, 159, 39)
+        private val COLOR_STRONG = Color.rgb(212, 83, 126)
+        private val COLOR_SHORT = Color.rgb(29, 158, 117)
         private val COLOR_TRACK = Color.rgb(192, 57, 43)
         private val COLOR_DOWNGRADE = Color.rgb(127, 119, 221)
         private val COLOR_OWN = Color.rgb(24, 95, 165)
@@ -88,15 +90,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private data class Counts(
-        val known: Long = 0, val seen: Long = 0, val newCells: Int = 0, val moving: Int = 0, val downgrades: Int = 0,
+        val known: Long = 0, val seen: Long = 0, val anomalies: Int = 0, val downgrades: Int = 0,
     )
 
     private class MapData(
         val clusters: List<Cluster>,
         val known: List<KnownCell>,
         val own: List<CellEntry>,
-        val newCells: List<SeenRow>,
-        val tracks: List<Pair<SeenRow, List<Geo.TrackPoint>>>,
+        val anomalies: List<CellEntry>,
+        val tracks: Map<String, List<Geo.TrackPoint>>,
         val downgrades: List<FlagRow>,
         val counts: Counts,
     )
@@ -148,9 +150,11 @@ class MainActivity : ComponentActivity() {
         findViewById<TextView>(R.id.legend).text = buildSpannedString {
             color(COLOR_OWN) { append("●") }; append(" Dina  ")
             color(COLOR_KNOWN) { append("●") }; append(" Kända  ")
-            color(COLOR_NEW) { append("▲") }; append(" Ny  ")
-            color(COLOR_TRACK) { append("━") }; append(" Rör sig  ")
-            color(COLOR_DOWNGRADE) { append("◆") }; append(" Nedgradering")
+            color(COLOR_DOWNGRADE) { append("◆") }; append(" Nedgr.\n")
+            color(COLOR_TRACK) { append("▲") }; append(" Rör sig  ")
+            color(COLOR_STRONG) { append("▲") }; append(" Stark  ")
+            color(COLOR_SHORT) { append("▲") }; append(" Kortvarig  ")
+            color(COLOR_NEW) { append("▲") }; append(" Ny")
         }
 
         applyInsets()
@@ -419,8 +423,8 @@ class MainActivity : ComponentActivity() {
         val lines = mutableListOf(
             first,
             String.format(
-                SV, "Dina celler: %,d · Kända: %,d · Nya: %d · Rör sig: %d · Nedgraderingar: %d",
-                counts.seen, counts.known, counts.newCells, counts.moving, counts.downgrades
+                SV, "Dina celler: %,d · Kända: %,d · Avvikande: %d · Nedgraderingar: %d",
+                counts.seen, counts.known, counts.anomalies, counts.downgrades
             )
         )
         when {
@@ -463,18 +467,18 @@ class MainActivity : ComponentActivity() {
         val known = if (detailed) db.knownInBox(s, w, n, e, MAX_POINTS) else emptyList()
         val clusters = if (detailed) emptyList() else db.clustersInBox(s, w, n, e, gridDegrees(zoom))
         val own = db.seenInBox(s, w, n, e, MAX_POINTS)
-        val newCells = db.flaggedSeen(CellDb.FLAG_NEW)
-        val tracks = db.flaggedSeen(CellDb.FLAG_MOVING).map { it to Geo.track(db.observations(it.key, 0L, 5000)) }
+        val anomalies = db.anomalies()
+        val tracks = anomalies.filter { it.moving }
+            .associate { it.key to Geo.track(db.observations(it.key, 0L, 5000)) }
         val downgrades = db.flags(CellDb.FLAG_DOWNGRADE, 200)
         val fc = db.flagCounts()
 
         return MapData(
-            clusters, known, own, newCells, tracks, downgrades,
+            clusters, known, own, anomalies, tracks, downgrades,
             Counts(
                 db.knownCount(),
                 db.seenCount(),
-                fc[CellDb.FLAG_NEW] ?: 0,
-                fc[CellDb.FLAG_MOVING] ?: 0,
+                anomalies.size,
                 fc[CellDb.FLAG_DOWNGRADE] ?: 0,
             )
         )
@@ -491,8 +495,9 @@ class MainActivity : ComponentActivity() {
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
         d.downgrades.forEach { overlays.add(downgradeMarker(it)) }
-        d.tracks.forEach { (cell, points) -> addTrack(cell, points) }
-        d.newCells.forEach { overlays.add(newCellMarker(it)) }
+        d.tracks.forEach { (key, points) -> addTrack(key, points) }
+        // Avvikande antenner ritas sist så att trianglarna hamnar överst.
+        d.anomalies.forEach { overlays.add(anomalyMarker(it, d.tracks[it.key]?.lastOrNull())) }
         overlays.add(myLocation)
 
         map.invalidate()
@@ -592,16 +597,29 @@ class MainActivity : ComponentActivity() {
         return BitmapDrawable(resources, bmp)
     }
 
-    private fun newCellMarker(s: SeenRow) = Marker(map).apply {
-        position = GeoPoint(s.lat, s.lon)
-        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_new_cell)
-        title = "Ny cell"
-        snippet = "${s.key}<br>Först sedd ${fmt(s.firstTs)}<br>Senast sedd ${fmt(s.lastTs)}" +
-            "<br>${s.count} mätningar, starkast ${s.bestDbm ?: "?"} dBm"
+    /**
+     * Triangel för en avvikande antenn. Färgen visar den viktigaste orsaken:
+     * röd rör sig, rosa onormal styrka, grön kortvarig, gul ny.
+     * En cell som rör sig placeras där den hördes senast.
+     */
+    private fun anomalyMarker(e: CellEntry, lastTrackPoint: Geo.TrackPoint?) = Marker(map).apply {
+        position = if (lastTrackPoint != null) GeoPoint(lastTrackPoint.lat, lastTrackPoint.lon) else GeoPoint(e.lat, e.lon)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+        icon = ContextCompat.getDrawable(
+            this@MainActivity,
+            when {
+                e.moving -> R.drawable.ic_tri_moving
+                e.strong -> R.drawable.ic_tri_strong
+                e.shortLived -> R.drawable.ic_tri_short
+                else -> R.drawable.ic_new_cell
+            }
+        )
+        title = e.reasons.joinToString(" · ")
+        snippet = "${e.key}<br>Först sedd ${fmt(e.firstTs)}<br>Senast sedd ${fmt(e.lastTs)}" +
+            "<br>${e.count} mätningar, starkast ${e.bestDbm ?: "?"} dBm"
     }
 
-    private fun addTrack(cell: SeenRow, points: List<Geo.TrackPoint>) {
+    private fun addTrack(key: String, points: List<Geo.TrackPoint>) {
         if (points.isEmpty()) return
 
         val line = Polyline(map).apply {
@@ -613,20 +631,18 @@ class MainActivity : ComponentActivity() {
                 pathEffect = DashPathEffect(floatArrayOf(12f * density, 7f * density), 0f)
             }
             title = "Cell som flyttat sig"
-            snippet = cell.key
+            snippet = key
         }
         map.overlays.add(line)
 
-        points.forEachIndexed { i, p ->
-            val last = i == points.lastIndex
+        // Den sista punkten visas som triangel av anomalyMarker.
+        points.dropLast(1).forEach { p ->
             map.overlays.add(Marker(map).apply {
                 position = GeoPoint(p.lat, p.lon)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                icon = ContextCompat.getDrawable(
-                    this@MainActivity, if (last) R.drawable.ic_track_now else R.drawable.ic_track_point
-                )
-                title = fmt(p.ts) + if (last) " (senast)" else ""
-                snippet = "${cell.key}<br>Uppskattad position från ${p.samples} mätningar"
+                icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_track_point)
+                title = fmt(p.ts)
+                snippet = "$key<br>Uppskattad position från ${p.samples} mätningar"
             })
         }
     }

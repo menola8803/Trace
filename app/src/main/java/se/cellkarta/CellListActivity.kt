@@ -35,7 +35,8 @@ import java.util.Locale
 class CellListActivity : ComponentActivity() {
 
     private enum class Filter(val label: String) {
-        ALL("Alla"), FLAGGED("Avvikelser"), NEW("Nya"), MOVING("Rör sig"), UNKNOWN("Ej i referens")
+        ALL("Alla"), FLAGGED("Avvikande"), MOVING("Rör sig"), STRONG("Stark"), SHORT("Kortvarig"),
+        NEW("Nya"), UNKNOWN("Ej i referens")
     }
 
     private val db by lazy { CellDb.get(this) }
@@ -101,7 +102,9 @@ class CellListActivity : ComponentActivity() {
         shown = all.filter { e ->
             val match = when (filter) {
                 Filter.ALL -> true
-                Filter.FLAGGED -> e.flags.isNotEmpty()
+                Filter.FLAGGED -> e.anomalous
+                Filter.STRONG -> e.strong
+                Filter.SHORT -> e.shortLived
                 Filter.NEW -> e.isNew
                 Filter.MOVING -> e.moving
                 Filter.UNKNOWN -> !e.known
@@ -110,8 +113,8 @@ class CellListActivity : ComponentActivity() {
         }
         btnFilter.text = "Visa: ${filter.label}"
         summary.text = String.format(
-            sv, "%,d sparade celler · %,d med avvikelser · visar %,d",
-            all.size, all.count { it.flags.isNotEmpty() }, shown.size
+            sv, "%,d sparade celler · %,d avvikande · visar %,d",
+            all.size, all.count { it.anomalous }, shown.size
         )
         empty.text = if (all.isEmpty())
             "Inga celler sparade än. Starta övervakningen på kartan, så sparas varje cell-ID som telefonen hör."
@@ -124,7 +127,7 @@ class CellListActivity : ComponentActivity() {
     private fun showDetails(e: CellEntry) {
         val parts = e.key.split(':')
         val text = buildString {
-            appendLine("Status: ${e.statusLabel}")
+            appendLine("Status: ${if (e.reasons.isEmpty()) e.statusLabel else e.reasons.joinToString(", ")}")
             if (parts.size == 5) {
                 appendLine("Nät: ${parts[0]}")
                 appendLine("Land och operatör: ${parts[1]}-${parts[2].padStart(2, '0')}")
@@ -196,6 +199,8 @@ class CellListActivity : ComponentActivity() {
 
             val (fg, bg) = when {
                 e.moving -> Color.rgb(121, 31, 31) to Color.rgb(252, 235, 235)
+                e.strong -> Color.rgb(114, 36, 62) to Color.rgb(251, 234, 240)
+                e.shortLived -> Color.rgb(8, 80, 65) to Color.rgb(225, 245, 238)
                 e.isNew -> Color.rgb(99, 56, 6) to Color.rgb(250, 238, 218)
                 e.downgraded -> Color.rgb(60, 52, 137) to Color.rgb(238, 237, 254)
                 e.known -> Color.rgb(68, 68, 65) to Color.rgb(241, 239, 232)

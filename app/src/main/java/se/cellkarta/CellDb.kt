@@ -46,10 +46,27 @@ data class CellEntry(
     val moving get() = CellDb.FLAG_MOVING in flags
     val isNew get() = CellDb.FLAG_NEW in flags
     val downgraded get() = CellDb.FLAG_DOWNGRADE in flags
+    val strong get() = CellDb.FLAG_STRONG in flags
+    val shortLived get() = CellDb.FLAG_SHORT in flags
+
+    /** Avvikande antenn som ska visas som triangel på kartan. */
+    val anomalous get() = moving || strong || shortLived || isNew
+
+    /** Alla orsaker, i klartext. */
+    val reasons: List<String>
+        get() = buildList {
+            if (moving) add("Rör sig")
+            if (strong) add("Onormal styrka")
+            if (shortLived) add("Kortvarig")
+            if (isNew) add("Ny, saknas i OpenCellID")
+            if (downgraded) add("Nedgradering")
+        }
 
     val statusLabel: String
         get() = when {
             moving -> "Rör sig"
+            strong -> "Stark"
+            shortLived -> "Kortvarig"
             isNew -> "Ny"
             downgraded -> "Nedgradering"
             known -> "Känd"
@@ -69,12 +86,17 @@ data class KnownCell(val key: String, val lat: Double, val lon: Double)
  *  flags        avvikelser: ny cell, cell som flyttar sig, nedgradering
  */
 class CellDb private constructor(ctx: Context) :
-    SQLiteOpenHelper(ctx, "cellkarta.db", null, 1) {
+    SQLiteOpenHelper(ctx, "cellkarta.db", null, 2) {
 
     companion object {
         const val FLAG_NEW = "NEW"
         const val FLAG_MOVING = "MOVING"
         const val FLAG_DOWNGRADE = "DOWNGRADE"
+        const val FLAG_STRONG = "STRONG"
+        const val FLAG_SHORT = "SHORT"
+
+        /** Avvikelser som gäller själva antennen (inte nedgradering, som är en händelse). */
+        val ANTENNA_FLAGS = listOf(FLAG_NEW, FLAG_MOVING, FLAG_STRONG, FLAG_SHORT)
 
         @Volatile private var instance: CellDb? = null
 
@@ -101,6 +123,7 @@ class CellDb private constructor(ctx: Context) :
                 "acc REAL, dbm INTEGER, registered INTEGER NOT NULL)"
         )
         db.execSQL("CREATE INDEX idx_obs_key_ts ON obs(cell_key, ts)")
+        db.execSQL("CREATE INDEX idx_obs_ts ON obs(ts)")
         db.execSQL(
             "CREATE TABLE seen(cell_key TEXT PRIMARY KEY, radio TEXT NOT NULL, " +
                 "first_ts INTEGER NOT NULL, last_ts INTEGER NOT NULL, count INTEGER NOT NULL, " +
@@ -114,8 +137,8 @@ class CellDb private constructor(ctx: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        listOf("known_cells", "obs", "seen", "flags").forEach { db.execSQL("DROP TABLE IF EXISTS $it") }
-        onCreate(db)
+        // Behåller alla sparade mätningar vid uppdatering.
+        if (oldVersion < 2) db.execSQL("CREATE INDEX IF NOT EXISTS idx_obs_ts ON obs(ts)")
     }
 
     // ---- Referensdata ----
@@ -271,6 +294,51 @@ class CellDb private constructor(ctx: Context) :
                 "AND s.wlon / s.wsum BETWEEN ${num(w)} AND ${num(e)}",
             limit
         )
+
+    /** Celler med någon av antennavvikelserna (ny, rör sig, stark, kortvarig). */
+    fun anomalies(): List<CellEntry> =
+        allSeenWhere(
+            "WHERE s.cell_key IN (SELECT cell_key FROM flags WHERE type IN " +
+                ANTENNA_FLAGS.joinToString(",", "(", ")") { "'$it'" } + ")",
+            null
+        )
+
+    /**
+     * Celler som telefonen anslöt till, som bara fanns under kort tid och som
+     * sedan inte har hörts på minst en halvtimme.
+     */
+    fun shortLivedCandidates(lastFrom: Long, lastTo: Long, maxDurationMs: Long): List<CellEntry> =
+        allSeenWhere(
+            "WHERE s.last_ts BETWEEN $lastFrom AND $lastTo " +
+                "AND s.last_ts - s.first_ts <= $maxDurationMs AND s.count >= 2 " +
+                "AND EXISTS(SELECT 1 FROM obs o WHERE o.cell_key = s.cell_key AND o.registered = 1) " +
+                "AND NOT EXISTS(SELECT 1 FROM flags f WHERE f.cell_key = s.cell_key AND f.type = '$FLAG_SHORT')",
+            50
+        )
+
+    /** Fanns telefonen kvar nära platsen efter tidpunkten? Avgörs av mätningar av andra celler. */
+    fun stayedNear(exceptKey: String, after: Long, lat: Double, lon: Double, km: Double): Boolean {
+        val dLat = km / 111.0
+        val dLon = km / (111.0 * Math.cos(Math.toRadians(lat)).coerceAtLeast(0.1))
+        val sql = "SELECT lat, lon FROM obs WHERE ts >= $after AND cell_key != ? " +
+            "AND lat BETWEEN ${num(lat - dLat)} AND ${num(lat + dLat)} " +
+            "AND lon BETWEEN ${num(lon - dLon)} AND ${num(lon + dLon)} LIMIT 200"
+        return readableDatabase.rawQuery(sql, arrayOf(exceptKey)).use { c ->
+            var found = false
+            while (!found && c.moveToNext()) found = Geo.km(lat, lon, c.getDouble(0), c.getDouble(1)) <= km
+            found
+        }
+    }
+
+    /** Median av cellens tidigare signalstyrka och antalet mätningar den bygger på. */
+    fun medianDbm(key: String, limit: Int): Pair<Int, Int>? {
+        val values = readableDatabase.rawQuery(
+            "SELECT dbm FROM obs WHERE cell_key=? AND dbm IS NOT NULL ORDER BY ts DESC LIMIT $limit",
+            arrayOf(key)
+        ).use { c -> buildList { while (c.moveToNext()) add(c.getInt(0)) } }.sorted()
+        if (values.isEmpty()) return null
+        return values[values.size / 2] to values.size
+    }
 
     fun seenCount(): Long = DatabaseUtils.queryNumEntries(readableDatabase, "seen")
 

@@ -10,6 +10,15 @@ och varnar för tre sorters avvikelser:
   eller långt från sin registrerade position. Spåret ritas som en streckad röd linje med tidpunkter.
 - **Nedgradering**: telefonen går från 4G/5G ner till 3G eller 2G.
 
+Avvikande antenner visas som **trianglar** på kartan, med en färg per orsak:
+
+| Triangel | Betyder |
+|---|---|
+| Röd | Rör sig: samma cell-ID hörs mer än 50 km isär inom ett dygn. Spåret ritas som en streckad linje. |
+| Rosa | Onormal styrka: starkare än −55 dBm, eller minst 20 dB starkare än cellens vanliga nivå. |
+| Grön | Kortvarig: telefonen anslöt, cellen fanns högst 15 minuter och försvann medan du var kvar på platsen. |
+| Gul | Ny: cell-ID:t saknas i OpenCellID. |
+
 Inget av detta bevisar att en IMSI-catcher finns i närheten. De flesta avvikelser har vanliga
 förklaringar, som nya master, ombyggnader i nätet eller mobila basstationer vid evenemang.
 
@@ -117,6 +126,8 @@ till exempel `LTE:240:1:61003:12345678`.
 | Inställning | Fil | Standard |
 |---|---|---|
 | Avstånd för "rör sig" | `Detector.kt`, `MOVE_KM` | 50 km |
+| Gräns för onormal styrka | `Detector.kt`, `STRONG_LTE_NR_DBM`, `STRONG_JUMP_DB` | −55 dBm, 20 dB |
+| Kortvarig cell | `Detector.kt`, `SHORT_MAX_DURATION_MS`, `SHORT_GONE_MS` | 15 min, 30 min |
 | Hur ofta cellerna läses | `CellMonitorService.kt`, `INTERVAL_MS` | 15 s |
 | Kräv GPS-noggrannhet | `CellMonitorService.kt`, `MAX_ACCURACY_M` | 100 m |
 | Zoom där enskilda master visas | `MainActivity.kt`, `DETAIL_ZOOM` | 11 |
