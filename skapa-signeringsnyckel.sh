@@ -7,9 +7,35 @@ cd "$(dirname "$0")"
 KEYSTORE="nycklar/cellkarta-release.jks"
 ALIAS="cellkarta"
 
+SECRETS="nycklar/github-hemligheter.txt"
+
+write_secrets() {
+  local pass
+  pass="$(grep '^storePassword=' keystore.properties | cut -d= -f2-)"
+  {
+    echo "Lägg in de här två i GitHub: repot > Settings > Secrets and variables > Actions > New repository secret"
+    echo
+    echo "Namn:  KEYSTORE_PASSWORD"
+    echo "Värde: $pass"
+    echo
+    echo "Namn:  KEYSTORE_B64"
+    echo "Värde (en enda lång rad):"
+    base64 < "$KEYSTORE" | tr -d '\n'
+    echo
+  } > "$SECRETS"
+  chmod 600 "$SECRETS"
+  echo
+  echo "Värdena för GitHub ligger i $SECRETS"
+  echo "Radera den filen när du har lagt in hemligheterna."
+}
+
+if [ -e "$KEYSTORE" ] && [ -e keystore.properties ]; then
+  echo "Signeringsnyckeln finns redan. Den skrivs inte över."
+  write_secrets
+  exit 0
+fi
 if [ -e "$KEYSTORE" ] || [ -e keystore.properties ]; then
-  echo "Det finns redan en signeringsnyckel. Den skrivs inte över."
-  echo "Ta bort $KEYSTORE och keystore.properties själv om du verkligen vill börja om."
+  echo "Bara en av $KEYSTORE och keystore.properties finns. Ta bort den och kör skriptet igen."
   exit 1
 fi
 
@@ -48,5 +74,7 @@ echo "Klart."
 echo "  Nyckel:   $KEYSTORE"
 echo "  Lösenord: keystore.properties"
 echo
-echo "Säkerhetskopiera båda filerna, till exempel i en lösenordshanterare."
+write_secrets
+echo
+echo "Säkerhetskopiera nyckeln och keystore.properties, till exempel i en lösenordshanterare."
 echo "Utan dem kan du inte släppa uppdateringar av appen med samma signatur."

@@ -38,6 +38,11 @@
             android:exported="false"
             android:label="Sparade celler" />
 
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:label="Inställningar" />
+
         <service
             android:name=".CellMonitorService"
             android:exported="false"

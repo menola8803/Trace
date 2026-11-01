@@ -78,6 +78,23 @@ släppa uppdateringar med samma signatur.
 
 Gula trianglar, röda linjer och lila romber dyker bara upp när något ovanligt händer.
 
+## Uppdateringar
+
+Under **Mer → Inställningar → Updates** ser du vilken version du har och kan söka efter en ny.
+Appen söker också automatiskt en gång per dygn, och det går att stänga av.
+En ny version laddas ner i webbläsaren och installeras ovanpå den gamla, så dina data finns kvar.
+
+För att det ska fungera måste varje bygge signeras med samma nyckel. Gör så här en gång:
+
+1. Kör `skapa-signeringsnyckel.ps1` (Windows) eller `./skapa-signeringsnyckel.sh` (Mac/Linux).
+2. Öppna `nycklar/github-hemligheter.txt` som skriptet skapar.
+3. På GitHub: repot → **Settings → Secrets and variables → Actions → New repository secret**.
+   Lägg in `KEYSTORE_PASSWORD` och `KEYSTORE_B64` med värdena från filen.
+4. Radera `github-hemligheter.txt`.
+
+Nästa bygge signeras då med din nyckel. Utan hemligheterna byggs en testversion som måste
+avinstalleras före varje uppdatering.
+
 ## Sparade celler
 
 Varje cell-ID som telefonen hör sparas med tid, GPS-position och signalstyrka.

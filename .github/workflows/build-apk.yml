@@ -23,23 +23,51 @@ jobs:
         with:
           gradle-version: "8.9"
 
-      - name: Bygg test-APK
-        run: gradle --no-daemon assembleDebug
+      # Med en fast signeringsnyckel kan varje ny APK installeras ovanpå den förra.
+      # Nyckeln läggs in som hemligheter i repot: Settings > Secrets and variables > Actions.
+      - name: Lägg in signeringsnyckel
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASSWORD" ]; then
+            mkdir -p nycklar
+            printf '%s' "$KEYSTORE_B64" | base64 -d > nycklar/cellkarta-release.jks
+            {
+              echo "storeFile=nycklar/cellkarta-release.jks"
+              echo "storePassword=$KEYSTORE_PASSWORD"
+              echo "keyAlias=cellkarta"
+              echo "keyPassword=$KEYSTORE_PASSWORD"
+            } > keystore.properties
+            echo "TASK=assembleRelease" >> "$GITHUB_ENV"
+            echo "APK=app/build/outputs/apk/release/app-release.apk" >> "$GITHUB_ENV"
+            echo "SIGNED=ja" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Ingen signeringsnyckel i repots hemligheter. Bygger testversion som måste avinstalleras före varje uppdatering."
+            echo "TASK=assembleDebug" >> "$GITHUB_ENV"
+            echo "APK=app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_ENV"
+            echo "SIGNED=nej" >> "$GITHUB_ENV"
+          fi
+
+      - name: Bygg APK
+        run: gradle --no-daemon "$TASK"
 
       - name: Döp om APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk Cellkarta-test.apk
+        run: cp "$APK" Cellkarta.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Cellkarta-test-apk
-          path: Cellkarta-test.apk
+          name: Cellkarta-apk
+          path: Cellkarta.apk
 
       - name: Publicera som nedladdning
         env:
           GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.run_number }}
         run: |
+          NOTES=$(printf 'Version: 0.1.%s\nBuild: %s\nSignerad med fast nyckel: %s\n\nÖppna den här sidan på telefonen, ladda ner Cellkarta.apk och installera.\nByggd från %s.' "$RUN" "$RUN" "$SIGNED" "${GITHUB_SHA::7}")
           gh release delete senaste --yes --cleanup-tag || true
-          gh release create senaste Cellkarta-test.apk \
+          gh release create senaste Cellkarta.apk \
             --prerelease \
-            --title "Cellkarta testversion" \
-            --notes "Testversion byggd från ${GITHUB_SHA::7}. Öppna länken på telefonen, ladda ner Cellkarta-test.apk och installera."
+            --title "Cellkarta 0.1.$RUN" \
+            --notes "$NOTES"

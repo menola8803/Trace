@@ -13,6 +13,9 @@ val keystoreProps = Properties().apply {
 }
 val hasReleaseKey = keystoreProps.getProperty("storeFile") != null
 
+// Versionsnumret sätts av GitHub-bygget, så varje ny APK blir en uppdatering av den förra.
+val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+
 android {
     namespace = "se.cellkarta"
     compileSdk = 35
@@ -21,8 +24,8 @@ android {
         applicationId = "se.cellkarta"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = buildNumber
+        versionName = "0.1.$buildNumber"
     }
 
     signingConfigs {

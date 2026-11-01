@@ -163,6 +163,7 @@ class MainActivity : ComponentActivity() {
         findViewById<Button>(R.id.btnMore).setOnClickListener { showMoreMenu(it) }
 
         focusFromIntent(intent)
+        autoCheckForUpdate()
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -283,17 +284,34 @@ class MainActivity : ComponentActivity() {
         stopService(Intent(this, CellMonitorService::class.java))
     }
 
+    // ---- Uppdateringar ----
+
+    /** Söker efter ny version högst en gång per dygn, om det är påslaget i inställningarna. */
+    private fun autoCheckForUpdate() {
+        if (!Prefs.autoUpdate(this)) return
+        if (System.currentTimeMillis() - Prefs.lastUpdateCheck(this) < 24 * 3_600_000L) return
+        lifecycleScope.launch {
+            val latest = try { UpdateChecker.latest() } catch (e: Exception) { return@launch }
+            Prefs.setLastUpdateCheck(this@MainActivity, System.currentTimeMillis())
+            if (latest.build > UpdateChecker.currentBuild(this@MainActivity)) {
+                UpdateChecker.offer(this@MainActivity, latest)
+            }
+        }
+    }
+
     // ---- Meny, nyckel, import och export ----
 
     private fun showMoreMenu(anchor: View) {
         val hasKey = Prefs.apiKey(this) != null
         PopupMenu(this, anchor).apply {
+            menu.add(0, 5, 0, "Inställningar")
             menu.add(0, 1, 0, "Ladda ner Sverige från OpenCellID")
             menu.add(0, 2, 1, if (hasKey) "OpenCellID-nyckel (sparad)" else "OpenCellID-nyckel…")
             menu.add(0, 3, 2, "Importera fil…")
             menu.add(0, 4, 3, "Exportera mätlogg")
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
+                    5 -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                     1 -> downloadSweden()
                     2 -> editApiKey()
                     3 -> if (!importing) importLauncher.launch(arrayOf("*/*"))
