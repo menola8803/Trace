@@ -66,6 +66,18 @@ Båda filerna står i `.gitignore` och laddas aldrig upp till GitHub.
 **Säkerhetskopiera dem**, till exempel i en lösenordshanterare. Förlorar du nyckeln kan du inte
 släppa uppdateringar med samma signatur.
 
+## Använda kartan
+
+1. Tryck **Starta** och godkänn plats och notiser.
+2. Gå gärna ut. När GPS:en hittar dig zoomar kartan in på dig.
+3. Varje cell telefonen hör blir en **blå prick** på sin uppskattade position.
+   Cellen du är ansluten till just nu har en större blå ring.
+4. Tryck på en prick för att se cell-ID och hur många gånger den har hörts.
+5. Med OpenCellID-data (Mer → Ladda ner Sverige) visas även **grå prickar** för kända master,
+   ihopslagna till siffror när du zoomar ut.
+
+Gula trianglar, röda linjer och lila romber dyker bara upp när något ovanligt händer.
+
 ## Sparade celler
 
 Varje cell-ID som telefonen hör sparas med tid, GPS-position och signalstyrka.

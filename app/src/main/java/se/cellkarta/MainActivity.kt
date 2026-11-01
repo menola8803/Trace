@@ -81,15 +81,19 @@ class MainActivity : ComponentActivity() {
         private val COLOR_NEW = Color.rgb(239, 159, 39)
         private val COLOR_TRACK = Color.rgb(192, 57, 43)
         private val COLOR_DOWNGRADE = Color.rgb(127, 119, 221)
+        private val COLOR_OWN = Color.rgb(24, 95, 165)
 
         private val SV: Locale = Locale.forLanguageTag("sv-SE")
     }
 
-    private data class Counts(val known: Long = 0, val newCells: Int = 0, val moving: Int = 0, val downgrades: Int = 0)
+    private data class Counts(
+        val known: Long = 0, val seen: Long = 0, val newCells: Int = 0, val moving: Int = 0, val downgrades: Int = 0,
+    )
 
     private class MapData(
         val clusters: List<Cluster>,
         val known: List<KnownCell>,
+        val own: List<CellEntry>,
         val newCells: List<SeenRow>,
         val tracks: List<Pair<SeenRow, List<Geo.TrackPoint>>>,
         val downgrades: List<FlagRow>,
@@ -104,6 +108,7 @@ class MainActivity : ComponentActivity() {
     private var refreshJob: Job? = null
     private var counts = Counts()
     private var importing = false
+    private var centeredOnUser = false
     private val density by lazy { resources.displayMetrics.density }
     private val timeFmt = DateTimeFormatter.ofPattern("d MMM HH:mm", SV).withZone(ZoneId.systemDefault())
 
@@ -139,6 +144,7 @@ class MainActivity : ComponentActivity() {
         btnStart = findViewById(R.id.btnStart)
 
         findViewById<TextView>(R.id.legend).text = buildSpannedString {
+            color(COLOR_OWN) { append("●") }; append(" Dina  ")
             color(COLOR_KNOWN) { append("●") }; append(" Kända  ")
             color(COLOR_NEW) { append("▲") }; append(" Ny  ")
             color(COLOR_TRACK) { append("━") }; append(" Rör sig  ")
@@ -245,7 +251,18 @@ class MainActivity : ComponentActivity() {
             PackageManager.PERMISSION_GRANTED
 
     private fun enableMyLocation() {
-        if (hasFineLocation()) myLocation.enableMyLocation()
+        if (!hasFineLocation()) return
+        myLocation.enableMyLocation()
+        if (!centeredOnUser) {
+            myLocation.runOnFirstFix {
+                runOnUiThread {
+                    val here = myLocation.myLocation ?: return@runOnUiThread
+                    if (centeredOnUser) return@runOnUiThread
+                    centeredOnUser = true
+                    map.controller.animateTo(here, 14.0, 800L)
+                }
+            }
+        }
     }
 
     private fun requestPermissionsAndStart() {
@@ -382,12 +399,17 @@ class MainActivity : ComponentActivity() {
         val lines = mutableListOf(
             first,
             String.format(
-                SV, "Kända celler: %,d · Nya: %d · Rör sig: %d · Nedgraderingar: %d",
-                counts.known, counts.newCells, counts.moving, counts.downgrades
+                SV, "Dina celler: %,d · Kända: %,d · Nya: %d · Rör sig: %d · Nedgraderingar: %d",
+                counts.seen, counts.known, counts.newCells, counts.moving, counts.downgrades
             )
         )
-        if (counts.known == 0L) {
-            lines += "Importera OpenCellID-data för Sverige för att kunna upptäcka nya celler."
+        when {
+            counts.seen == 0L && !st.running ->
+                lines += "Tryck Starta. Cellerna du hör dyker upp som blå prickar där du är."
+            counts.seen == 0L ->
+                lines += "Väntar på första mätningen. Gå gärna ut, GPS:en behöver fri sikt."
+            counts.known == 0L ->
+                lines += "Ladda ner Sverige under Mer för att se kända master och kunna upptäcka nya celler."
         }
         status.text = lines.joinToString("\n")
     }
@@ -420,15 +442,17 @@ class MainActivity : ComponentActivity() {
 
         val known = if (detailed) db.knownInBox(s, w, n, e, MAX_POINTS) else emptyList()
         val clusters = if (detailed) emptyList() else db.clustersInBox(s, w, n, e, gridDegrees(zoom))
+        val own = db.seenInBox(s, w, n, e, MAX_POINTS)
         val newCells = db.flaggedSeen(CellDb.FLAG_NEW)
         val tracks = db.flaggedSeen(CellDb.FLAG_MOVING).map { it to Geo.track(db.observations(it.key, 0L, 5000)) }
         val downgrades = db.flags(CellDb.FLAG_DOWNGRADE, 200)
         val fc = db.flagCounts()
 
         return MapData(
-            clusters, known, newCells, tracks, downgrades,
+            clusters, known, own, newCells, tracks, downgrades,
             Counts(
                 db.knownCount(),
+                db.seenCount(),
                 fc[CellDb.FLAG_NEW] ?: 0,
                 fc[CellDb.FLAG_MOVING] ?: 0,
                 fc[CellDb.FLAG_DOWNGRADE] ?: 0,
@@ -443,6 +467,9 @@ class MainActivity : ComponentActivity() {
 
         if (d.known.isNotEmpty()) overlays.add(knownOverlay(d.known))
         d.clusters.forEach { overlays.add(clusterMarker(it)) }
+        if (d.own.isNotEmpty()) overlays.add(ownOverlay(d.own))
+        val servingKey = LiveStatus.state.value.servingKey
+        d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
         d.downgrades.forEach { overlays.add(downgradeMarker(it)) }
         d.tracks.forEach { (cell, points) -> addTrack(cell, points) }
         d.newCells.forEach { overlays.add(newCellMarker(it)) }
@@ -471,6 +498,39 @@ class MainActivity : ComponentActivity() {
                 toast("Känd cell ${p.label}")
             }
         }
+    }
+
+    /** Cellerna du själv har hört, på deras uppskattade position. */
+    private fun ownOverlay(cells: List<CellEntry>): SimpleFastPointOverlay {
+        val points: List<IGeoPoint> = cells.map { LabelledGeoPoint(it.lat, it.lon, it.key) }
+        val byKey = cells.associateBy { it.key }
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = COLOR_OWN
+            style = Paint.Style.FILL
+        }
+        val options = SimpleFastPointOverlayOptions.getDefaultStyle()
+            .setAlgorithm(SimpleFastPointOverlayOptions.RenderingAlgorithm.MAXIMUM_OPTIMIZATION)
+            .setSymbol(SimpleFastPointOverlayOptions.Shape.CIRCLE)
+            .setRadius(5f * density)
+            .setCellSize(10)
+            .setPointStyle(paint)
+            .setIsClickable(true)
+
+        return SimpleFastPointOverlay(SimplePointTheme(points, false), options).apply {
+            setOnClickListener { pts, index ->
+                val key = (pts.get(index) as LabelledGeoPoint).label
+                val e = byKey[key]
+                toast(if (e == null) key else "$key\n${e.statusLabel} · ${e.count} mätningar · senast ${fmt(e.lastTs)}")
+            }
+        }
+    }
+
+    private fun servingMarker(e: CellEntry) = Marker(map).apply {
+        position = GeoPoint(e.lat, e.lon)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_serving)
+        title = "Ansluten nu"
+        snippet = "${e.key}<br>${e.statusLabel} · ${e.count} mätningar"
     }
 
     private fun clusterMarker(c: Cluster) = Marker(map).apply {

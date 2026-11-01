@@ -9,6 +9,7 @@ object LiveStatus {
     data class State(
         val running: Boolean = false,
         val serving: String? = null,
+        val servingKey: String? = null,
         val lastScan: Long = 0L,
         val note: String? = null,
     )
@@ -22,8 +23,11 @@ object LiveStatus {
         if (running) it.copy(running = true) else State()
     }
 
-    fun scanned(serving: String?, ts: Long) =
-        state.update { it.copy(serving = serving, lastScan = ts, note = null) }
+    fun scanned(serving: String?, servingKey: String?, ts: Long) {
+        val changedCell = state.value.servingKey != servingKey
+        state.update { it.copy(serving = serving, servingKey = servingKey, lastScan = ts, note = null) }
+        if (changedCell) bump()
+    }
 
     fun note(text: String) = state.update { it.copy(note = text) }
 

@@ -264,16 +264,28 @@ class CellDb private constructor(ctx: Context) :
             buildMap { while (c.moveToNext()) put(c.getString(0), c.getInt(1)) }
         }
 
+    /** Celler du själv har hört, med uppskattad position inom kartutsnittet. */
+    fun seenInBox(s: Double, w: Double, n: Double, e: Double, limit: Int): List<CellEntry> =
+        allSeenWhere(
+            "WHERE s.wlat / s.wsum BETWEEN ${num(s)} AND ${num(n)} " +
+                "AND s.wlon / s.wsum BETWEEN ${num(w)} AND ${num(e)}",
+            limit
+        )
+
+    fun seenCount(): Long = DatabaseUtils.queryNumEntries(readableDatabase, "seen")
+
     // ---- Lista över sparade celler ----
 
     /** Alla celler appen har hört, med status mot referensdata och avvikelser. */
-    fun allSeen(): List<CellEntry> =
+    fun allSeen(): List<CellEntry> = allSeenWhere("", null)
+
+    private fun allSeenWhere(where: String, limit: Int?): List<CellEntry> =
         readableDatabase.rawQuery(
             "SELECT s.cell_key, s.radio, s.first_ts, s.last_ts, s.count, s.best_dbm, " +
                 "s.wlat / s.wsum, s.wlon / s.wsum, " +
                 "EXISTS(SELECT 1 FROM known_cells k WHERE k.cell_key = s.cell_key), " +
                 "(SELECT GROUP_CONCAT(DISTINCT f.type) FROM flags f WHERE f.cell_key = s.cell_key) " +
-                "FROM seen s ORDER BY s.last_ts DESC",
+                "FROM seen s $where ORDER BY s.last_ts DESC" + (limit?.let { " LIMIT $it" } ?: ""),
             null
         ).use { c ->
             buildList {

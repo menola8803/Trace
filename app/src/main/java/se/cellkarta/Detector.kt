@@ -85,7 +85,7 @@ class Detector(private val db: CellDb, private val notifier: Notifier) {
             lastServingRadio = serving.radio
         }
 
-        LiveStatus.scanned(serving?.describe(), now)
+        LiveStatus.scanned(serving?.describe(), serving?.key, now)
         if (changed) LiveStatus.bump()
     }
 }
