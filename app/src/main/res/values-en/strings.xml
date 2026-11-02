@@ -206,6 +206,25 @@
     <string name="about_abnormal_body">Antennas that move, have abnormal strength, are short-lived or are missing from OpenCellID get an exclamation mark. A question mark shows where it happened.</string>
     <string name="about_version">Version %1$s (build %2$d)</string>
 
+    <string name="legend_mast">Mast</string>
+    <string name="mast_title">Mast</string>
+    <string name="mast_title_op">Mast · %1$s</string>
+    <string name="mast_added">Mast marked. Tap it for details.</string>
+    <string name="mast_tip">Tip: press and hold on the map where a mast stands to mark it.</string>
+    <string name="mast_remove_title">Remove the mast?</string>
+    <string name="mast_remove_msg">The marker is removed from the map. The measurements are kept.</string>
+    <string name="mast_removed">The mast is removed.</string>
+    <string name="mast_operator">Likely operator</string>
+    <string name="mast_unknown">Not known yet. Start recording near the mast and the app works it out.</string>
+    <string name="mast_own">Your measurements</string>
+    <string name="mast_own_value">%1$s, mast %2$s %3$d, strongest %4$s dBm</string>
+    <string name="mast_sectors">Sectors</string>
+    <string name="mast_known">OpenCellID within 300 m</string>
+    <string name="mast_known_none">no known cells</string>
+    <string name="mast_only_own">The phone only hears its own operator\'s cells. Other operators on the same roof show up through OpenCellID.</string>
+    <string name="mast_marked">Marked</string>
+    <string name="mast_tap_again">Tap the mast again to remove it.</string>
+
     <string name="splash_map">MAP</string>
     <string name="splash_antennas">ANTENNAS</string>
     <string name="splash_abnormal">ANOMALIES</string>

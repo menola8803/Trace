@@ -63,6 +63,44 @@ object MapMarks {
             BitmapDrawable(ctx.resources, bmp)
         }
 
+    /** Egen mastmarkering: guldring med en sändande mast, i samma stil som Trace-ikonen. */
+    fun mastIcon(ctx: Context, sizeDp: Float = 38f): BitmapDrawable = cache.getOrPut("mast-$sizeDp") {
+        val d = ctx.resources.displayMetrics.density
+        val size = (sizeDp * d).toInt()
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val r = size / 2f
+        val gold = Color.rgb(232, 176, 74)
+        val pale = Color.rgb(243, 217, 160)
+        val p = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        p.color = Color.argb(80, 232, 176, 74)
+        c.drawCircle(r, r, r, p)
+        p.color = Color.argb(245, 23, 38, 41)
+        c.drawCircle(r, r, r * 0.74f, p)
+        p.style = Paint.Style.STROKE
+        p.strokeWidth = 2.4f * d
+        p.color = gold
+        c.drawCircle(r, r, r * 0.74f, p)
+
+        // Masten: två ben, en tvärslå och en topp som sänder
+        val u = size / 38f
+        p.strokeWidth = 2f * u
+        p.strokeCap = Paint.Cap.ROUND
+        c.drawLine(r, r - 7 * u, r - 5.5f * u, r + 9 * u, p)
+        c.drawLine(r, r - 7 * u, r + 5.5f * u, r + 9 * u, p)
+        c.drawLine(r - 3f * u, r + 2.5f * u, r + 3f * u, r + 2.5f * u, p)
+        p.color = pale
+        for (rad in floatArrayOf(4.5f * u, 8f * u)) {
+            val o = android.graphics.RectF(r - rad, r - 7 * u - rad, r + rad, r - 7 * u + rad)
+            c.drawArc(o, 145f, 70f, false, p)
+            c.drawArc(o, -35f, 70f, false, p)
+        }
+        p.style = Paint.Style.FILL
+        c.drawCircle(r, r - 7 * u, 1.8f * u, p)
+        BitmapDrawable(ctx.resources, bmp)
+    }
+
     /**
      * Förklaringsruta med tunn kant. Den ligger kvar, även när kartan ritas om,
      * tills man trycker bredvid den på kartan.

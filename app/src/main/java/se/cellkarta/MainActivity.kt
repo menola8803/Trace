@@ -94,6 +94,7 @@ class MainActivity : BaseActivity() {
         val anomalies: List<CellEntry>,
         val tracks: Map<String, List<Geo.TrackPoint>>,
         val events: List<FlagRow>,
+        val masts: List<Pair<UserMast, MastGuess>>,
         val counts: Counts,
     )
 
@@ -221,14 +222,23 @@ class MainActivity : BaseActivity() {
     // ---- Första start: berätta om mappen i Download ----
 
     private fun maybeShowStorageInfo() {
-        if (Prefs.storageInfoShown(this)) return
+        if (Prefs.storageInfoShown(this)) return maybeShowMastTip()
         lifecycleScope.launch(Dispatchers.IO) { TraceFiles.ensureFolder(this@MainActivity) }
         AlertDialog.Builder(this)
             .setTitle(R.string.storage_title)
             .setMessage(R.string.storage_message)
             .setCancelable(false)
-            .setPositiveButton(R.string.ok) { _, _ -> Prefs.setStorageInfoShown(this) }
+            .setPositiveButton(R.string.ok) { _, _ ->
+                Prefs.setStorageInfoShown(this)
+                maybeShowMastTip()
+            }
             .show()
+    }
+
+    private fun maybeShowMastTip() {
+        if (Prefs.mastTipShown(this)) return
+        Prefs.setMastTipShown(this)
+        toast(getString(R.string.mast_tip))
     }
 
     // ---- Layout ----
@@ -241,7 +251,8 @@ class MainActivity : BaseActivity() {
             inSpans(ImageSpan(drawable, ImageSpan.ALIGN_BOTTOM)) { append(" ") }
         }
         mark(dot(COLOR_OWN)); append(" ${getString(R.string.legend_own)}   ")
-        mark(dot(COLOR_KNOWN)); append(" ${getString(R.string.legend_known)}\n")
+        mark(dot(COLOR_KNOWN)); append(" ${getString(R.string.legend_known)}   ")
+        mark(MapMarks.mastIcon(this@MainActivity, 24f)); append(" ${getString(R.string.legend_mast)}\n")
         mark(MapMarks.icon(this@MainActivity, "!", MapMarks.COLOR_MOVING, 22f)); append(" ${getString(R.string.legend_antenna)}   ")
         mark(MapMarks.icon(this@MainActivity, "?", MapMarks.COLOR_NEW, 22f)); append(" ${getString(R.string.legend_event)}")
     }
@@ -545,9 +556,10 @@ class MainActivity : BaseActivity() {
         val tracks = anomalies.filter { it.moving }
             .associate { it.key to Geo.track(db.observations(it.key, 0L, 5000)) }
         val events = db.allFlags(400)
+        val masts = db.masts().map { it to MastGuess.of(db, it.lat, it.lon) }
 
         return MapData(
-            clusters, known, own, anomalies, tracks, events,
+            clusters, known, own, anomalies, tracks, events, masts,
             Counts(db.knownCount(), db.seenCount(), anomalies.size, events.size)
         )
     }
@@ -567,6 +579,7 @@ class MainActivity : BaseActivity() {
         if (d.own.isNotEmpty()) overlays.add(ownOverlay(d.own))
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
+        d.masts.forEach { (m, g) -> overlays.add(mastMarker(m, g)) }
         d.tracks.forEach { (key, points) -> addTrack(key, points) }
         // Frågetecken där det hände, sedan utropstecken på antennerna överst.
         d.events.forEach { overlays.add(eventMarker(it)) }
@@ -592,7 +605,18 @@ class MainActivity : BaseActivity() {
                 return true
             }
 
-            override fun longPressHelper(p: GeoPoint?): Boolean = false
+            /** Håll fingret på kartan för att markera en mast där. */
+            override fun longPressHelper(p: GeoPoint?): Boolean {
+                if (p == null) return false
+                map.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                lifecycleScope.launch {
+                    val id = withContext(Dispatchers.IO) { db.addMast(p.latitude, p.longitude, System.currentTimeMillis()) }
+                    toast(getString(R.string.mast_added))
+                    bubble.openKey = "mast:$id"
+                    scheduleRefresh(0)
+                }
+                return true
+            }
         })
     }
 
@@ -728,6 +752,58 @@ class MainActivity : BaseActivity() {
             add("<i>${getString(R.string.expl_not_proof)}</i>")
         }.joinToString("<br>")
         setInfoWindow(bubble)
+    }
+
+    /**
+     * Mast som du har markerat. Ett tryck visar rutan med trolig operatör, ett tryck till
+     * frågar om markeringen ska tas bort.
+     */
+    private fun mastMarker(m: UserMast, g: MastGuess) = Marker(map).apply {
+        position = GeoPoint(m.lat, m.lon)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        icon = MapMarks.mastIcon(this@MainActivity)
+        relatedObject = "mast:${m.id}"
+        title = if (g.operator != null) tr(R.string.mast_title_op, g.operator) else getString(R.string.mast_title)
+        snippet = buildList {
+            add(Texts.row(getString(R.string.mast_operator), g.operator ?: getString(R.string.mast_unknown)))
+            if (g.siteId != null) {
+                add(Texts.row(getString(R.string.mast_own),
+                    tr(R.string.mast_own_value, g.operator ?: "?", g.siteRadio ?: "", g.siteId, g.bestDbm?.toString() ?: "?")))
+                add(Texts.row(getString(R.string.mast_sectors),
+                    g.sectors.joinToString(", ") { c -> "${Operators.sector(c.key)} (${c.bestDbm ?: "?"} dBm)" }))
+            }
+            add(Texts.row(getString(R.string.mast_known),
+                if (g.knownOperators.isEmpty()) getString(R.string.mast_known_none)
+                else g.knownOperators.joinToString(", ") { (op, n) -> "$op ($n)" }))
+            add(Texts.row(getString(R.string.mast_marked), fmt(m.ts)))
+            add(Texts.row(getString(R.string.row_position), String.format(Locale.ROOT, "%.5f, %.5f", m.lat, m.lon)))
+            add("")
+            add("<i>${getString(R.string.mast_only_own)}</i>")
+            add("<i>${getString(R.string.mast_tap_again)}</i>")
+        }.joinToString("<br>")
+        setInfoWindow(bubble)
+        setOnMarkerClickListener { marker, _ ->
+            if (bubble.isOpen && bubble.openKey == marker.relatedObject) confirmRemoveMast(m)
+            else marker.showInfoWindow()
+            true
+        }
+    }
+
+    private fun confirmRemoveMast(m: UserMast) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.mast_remove_title)
+            .setMessage(R.string.mast_remove_msg)
+            .setPositiveButton(R.string.remove) { _, _ ->
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) { db.deleteMast(m.id) }
+                    bubble.openKey = null
+                    InfoWindow.closeAllInfoWindowsOn(map)
+                    toast(getString(R.string.mast_removed))
+                    scheduleRefresh(0)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     /** Frågetecken med ring där avvikelsen upptäcktes, det vill säga där du var. */

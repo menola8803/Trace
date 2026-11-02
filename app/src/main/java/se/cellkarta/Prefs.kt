@@ -14,6 +14,7 @@ object Prefs {
     private const val KEY_AUTO_UPDATE = "auto_update"
     private const val KEY_LANGUAGE = "language"
     private const val KEY_STORAGE_INFO = "storage_info_shown"
+    private const val KEY_MAST_TIP = "mast_tip_shown"
     private const val KEY_LAST_UPDATE_CHECK = "last_update_check"
 
     private fun sp(ctx: Context) = ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -40,4 +41,8 @@ object Prefs {
     fun storageInfoShown(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_STORAGE_INFO, false)
 
     fun setStorageInfoShown(ctx: Context) = sp(ctx).edit { putBoolean(KEY_STORAGE_INFO, true) }
+
+    fun mastTipShown(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_MAST_TIP, false)
+
+    fun setMastTipShown(ctx: Context) = sp(ctx).edit { putBoolean(KEY_MAST_TIP, true) }
 }

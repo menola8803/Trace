@@ -219,6 +219,26 @@
     <string name="about_abnormal_body">Antenner som rör sig, har onormal styrka, är kortvariga eller saknas i OpenCellID får ett utropstecken. Ett frågetecken visar var det hände.</string>
     <string name="about_version">Version %1$s (build %2$d)</string>
 
+    <!-- Egna master -->
+    <string name="legend_mast">Mast</string>
+    <string name="mast_title">Mast</string>
+    <string name="mast_title_op">Mast · %1$s</string>
+    <string name="mast_added">Mast markerad. Tryck på den för detaljer.</string>
+    <string name="mast_tip">Tips: håll fingret på kartan där en mast står för att markera den.</string>
+    <string name="mast_remove_title">Ta bort masten?</string>
+    <string name="mast_remove_msg">Markeringen tas bort från kartan. Mätningarna finns kvar.</string>
+    <string name="mast_removed">Masten är borttagen.</string>
+    <string name="mast_operator">Trolig operatör</string>
+    <string name="mast_unknown">Okänd ännu. Starta inspelningen nära masten, så räknar appen ut den.</string>
+    <string name="mast_own">Dina mätningar</string>
+    <string name="mast_own_value">%1$s, mast %2$s %3$d, starkast %4$s dBm</string>
+    <string name="mast_sectors">Sektorer</string>
+    <string name="mast_known">OpenCellID inom 300 m</string>
+    <string name="mast_known_none">inga kända celler</string>
+    <string name="mast_only_own">Telefonen hör bara sin egen operatörs celler. Andra operatörer på samma tak syns via OpenCellID.</string>
+    <string name="mast_marked">Markerad</string>
+    <string name="mast_tap_again">Tryck på masten igen för att ta bort den.</string>
+
     <!-- Startskärm -->
     <string name="splash_map">KARTA</string>
     <string name="splash_antennas">ANTENNER</string>

@@ -92,6 +92,8 @@ data class DaySummary(
 
 data class Cluster(val lat: Double, val lon: Double, val count: Int)
 
+data class UserMast(val id: Long, val lat: Double, val lon: Double, val ts: Long)
+
 data class KnownCell(val key: String, val lat: Double, val lon: Double)
 
 /**
@@ -102,7 +104,7 @@ data class KnownCell(val key: String, val lat: Double, val lon: Double)
  *  flags        avvikelser: ny cell, cell som flyttar sig, nedgradering
  */
 class CellDb private constructor(ctx: Context) :
-    SQLiteOpenHelper(ctx, "cellkarta.db", null, 2) {
+    SQLiteOpenHelper(ctx, "cellkarta.db", null, 3) {
 
     companion object {
         const val FLAG_NEW = "NEW"
@@ -150,11 +152,53 @@ class CellDb private constructor(ctx: Context) :
                 "type TEXT NOT NULL, ts INTEGER NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, detail TEXT)"
         )
         db.execSQL("CREATE INDEX idx_flags_type ON flags(type, cell_key)")
+        createMasts(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         // Behåller alla sparade mätningar vid uppdatering.
         if (oldVersion < 2) db.execSQL("CREATE INDEX IF NOT EXISTS idx_obs_ts ON obs(ts)")
+        if (oldVersion < 3) createMasts(db)
+    }
+
+    /** Master som användaren själv har markerat på kartan. */
+    private fun createMasts(db: SQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS masts(id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "lat REAL NOT NULL, lon REAL NOT NULL, ts INTEGER NOT NULL)"
+        )
+    }
+
+    fun addMast(lat: Double, lon: Double, ts: Long): Long =
+        writableDatabase.insert("masts", null, ContentValues().apply {
+            put("lat", lat)
+            put("lon", lon)
+            put("ts", ts)
+        })
+
+    fun deleteMast(id: Long) {
+        writableDatabase.delete("masts", "id=?", arrayOf(id.toString()))
+    }
+
+    fun masts(): List<UserMast> =
+        readableDatabase.rawQuery("SELECT id, lat, lon, ts FROM masts ORDER BY ts", null).use { c ->
+            buildList { while (c.moveToNext()) add(UserMast(c.getLong(0), c.getDouble(1), c.getDouble(2), c.getLong(3))) }
+        }
+
+    /** Egna celler vars uppskattade position ligger inom radien. */
+    fun seenNear(lat: Double, lon: Double, km: Double): List<CellEntry> {
+        val dLat = km / 111.0
+        val dLon = km / (111.0 * Math.cos(Math.toRadians(lat)).coerceAtLeast(0.1))
+        return seenInBox(lat - dLat, lon - dLon, lat + dLat, lon + dLon, 500)
+            .filter { Geo.km(lat, lon, it.lat, it.lon) <= km }
+    }
+
+    /** Kända celler från OpenCellID inom radien. */
+    fun knownNear(lat: Double, lon: Double, km: Double): List<KnownCell> {
+        val dLat = km / 111.0
+        val dLon = km / (111.0 * Math.cos(Math.toRadians(lat)).coerceAtLeast(0.1))
+        return knownInBox(lat - dLat, lon - dLon, lat + dLat, lon + dLon, 500)
+            .filter { Geo.km(lat, lon, it.lat, it.lon) <= km }
     }
 
     // ---- Referensdata ----
