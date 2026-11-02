@@ -43,6 +43,32 @@
         android:contentDescription="@string/settings"
         android:src="@drawable/ic_settings" />
 
+    <!-- Inspelningsknapp: startar och stoppar mätningen -->
+    <FrameLayout
+        android:id="@+id/recordWrap"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="72dp"
+        android:layout_marginRight="12dp"
+        android:clipChildren="false">
+
+        <View
+            android:id="@+id/recordPulse"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:alpha="0"
+            android:background="@drawable/bg_record_pulse" />
+
+        <ImageButton
+            android:id="@+id/btnRecord"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/bg_round_button"
+            android:contentDescription="@string/start"
+            android:src="@drawable/ic_record" />
+    </FrameLayout>
+
     <LinearLayout
         android:id="@+id/panel"
         android:layout_width="match_parent"
@@ -72,18 +98,9 @@
             android:orientation="horizontal">
 
             <Button
-                android:id="@+id/btnStart"
-                style="@style/Trace.Button.Primary"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/start" />
-
-            <Button
                 android:id="@+id/btnCells"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="@string/cells" />
 

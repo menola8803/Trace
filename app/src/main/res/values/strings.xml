@@ -31,7 +31,7 @@
     <string name="status_connected">Ansluten: %1$s</string>
     <string name="status_searching">Söker celler…</string>
     <string name="status_counts">Dina celler: %1$,d · Kända: %2$,d · Onormala: %3$d · Händelser: %4$d</string>
-    <string name="hint_press_start">Tryck Starta. Cellerna du hör dyker upp som prickar där du är.</string>
+    <string name="hint_press_start">Tryck på den röda inspelningsknappen uppe till höger. Cellerna du hör dyker upp som prickar där du är.</string>
     <string name="hint_waiting">Väntar på första mätningen. Gå gärna ut, GPS:en behöver fri sikt.</string>
     <string name="hint_download">Ladda ner Sverige under Mer för att se kända master och kunna upptäcka nya celler.</string>
     <string name="known_cell">Känd cell %1$s</string>

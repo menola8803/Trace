@@ -27,7 +27,7 @@
     <string name="status_connected">Connected: %1$s</string>
     <string name="status_searching">Looking for cells…</string>
     <string name="status_counts">Your cells: %1$,d · Known: %2$,d · Abnormal: %3$d · Events: %4$d</string>
-    <string name="hint_press_start">Tap Start. The cells you hear show up as dots where you are.</string>
+    <string name="hint_press_start">Tap the red record button at the top right. The cells you hear show up as dots where you are.</string>
     <string name="hint_waiting">Waiting for the first measurement. Go outside if you can, the GPS needs a clear view of the sky.</string>
     <string name="hint_download">Download Sweden under More to see known masts and detect new cells.</string>
     <string name="known_cell">Known cell %1$s</string>

@@ -99,7 +99,8 @@ class MainActivity : BaseActivity() {
 
     private lateinit var map: MapView
     private lateinit var status: TextView
-    private lateinit var btnStart: Button
+    private lateinit var btnRecord: android.widget.ImageButton
+    private var pulse: android.animation.Animator? = null
     private lateinit var myLocation: MyLocationNewOverlay
     private lateinit var bubble: MapMarks.Bubble
     private val db by lazy { CellDb.get(this) }
@@ -142,7 +143,7 @@ class MainActivity : BaseActivity() {
         setContentView(R.layout.activity_main)
         map = findViewById(R.id.map)
         status = findViewById(R.id.status)
-        btnStart = findViewById(R.id.btnStart)
+        btnRecord = findViewById(R.id.btnRecord)
         bubble = MapMarks.Bubble(map)
 
         findViewById<TextView>(R.id.legend).text = legendText()
@@ -153,7 +154,7 @@ class MainActivity : BaseActivity() {
         findViewById<View>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-        btnStart.setOnClickListener {
+        btnRecord.setOnClickListener {
             if (LiveStatus.state.value.running) stopMonitor() else requestPermissionsAndStart()
         }
         findViewById<Button>(R.id.btnCells).setOnClickListener {
@@ -259,6 +260,8 @@ class MainActivity : BaseActivity() {
         val baseTop = (legend.layoutParams as MarginLayoutParams).topMargin
         val baseStart = (legend.layoutParams as MarginLayoutParams).leftMargin
         val gear = findViewById<View>(R.id.btnSettings)
+        val record = findViewById<View>(R.id.recordWrap)
+        val recordTop = (record.layoutParams as MarginLayoutParams).topMargin
         val gearTop = (gear.layoutParams as MarginLayoutParams).topMargin
         val gearEnd = (gear.layoutParams as MarginLayoutParams).rightMargin
         val scrim = findViewById<View>(R.id.topScrim)
@@ -272,6 +275,10 @@ class MainActivity : BaseActivity() {
             }
             gear.updateLayoutParams<MarginLayoutParams> {
                 topMargin = gearTop + bars.top
+                rightMargin = gearEnd + bars.right
+            }
+            record.updateLayoutParams<MarginLayoutParams> {
+                topMargin = recordTop + bars.top
                 rightMargin = gearEnd + bars.right
             }
             // Kartan börjar under statusraden. Där ovanför syns appens mörka bakgrund,
@@ -463,7 +470,7 @@ class MainActivity : BaseActivity() {
     // ---- Status ----
 
     private fun renderStatus(st: LiveStatus.State) {
-        btnStart.setText(if (st.running) R.string.stop else R.string.start)
+        showRecording(st.running)
         if (importing) return
 
         val first = when {
@@ -482,6 +489,27 @@ class MainActivity : BaseActivity() {
             counts.known == 0L -> lines += getString(R.string.hint_download)
         }
         status.text = lines.joinToString("\n")
+    }
+
+    /** Röd punkt när appen inte mäter, stoppfyrkant med pulserande röd ring när den mäter. */
+    private fun showRecording(running: Boolean) {
+        btnRecord.setImageResource(if (running) R.drawable.ic_record_stop else R.drawable.ic_record)
+        btnRecord.contentDescription = getString(if (running) R.string.stop else R.string.start)
+        val ring = findViewById<View>(R.id.recordPulse)
+        if (running && pulse == null) {
+            val scaleX = android.animation.PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, 1.45f)
+            val scaleY = android.animation.PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, 1.45f)
+            val alpha = android.animation.PropertyValuesHolder.ofFloat(View.ALPHA, 0.9f, 0f)
+            pulse = android.animation.ObjectAnimator.ofPropertyValuesHolder(ring, scaleX, scaleY, alpha).apply {
+                duration = 1400L
+                repeatCount = android.animation.ValueAnimator.INFINITE
+                start()
+            }
+        } else if (!running && pulse != null) {
+            pulse?.cancel()
+            pulse = null
+            ring.alpha = 0f
+        }
     }
 
     // ---- Karta ----
