@@ -97,6 +97,18 @@ class SettingsActivity : BaseActivity() {
         showLastCheck()
         loadChanges()
 
+        // Nollställ
+        findViewById<View>(R.id.btnClearMarks).setOnClickListener {
+            confirmReset(R.string.reset_marks, R.string.reset_marks_confirm, R.string.reset_marks_done) {
+                CellDb.get(this).clearFlags()
+            }
+        }
+        findViewById<View>(R.id.btnClearAll).setOnClickListener {
+            confirmReset(R.string.reset_all, R.string.reset_all_confirm, R.string.reset_all_done) {
+                CellDb.get(this).clearRecordings()
+            }
+        }
+
         // Lagring
         findViewById<View>(R.id.btnDeleteFolder).setOnClickListener { confirmDeleteFolder() }
 
@@ -275,6 +287,23 @@ class SettingsActivity : BaseActivity() {
         this.text = text
         textSize = 13f
         setTextColor(ContextCompat.getColor(this@SettingsActivity, color))
+    }
+
+    private fun confirmReset(title: Int, message: Int, done: Int, work: () -> Unit) {
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.reset_do) { _, _ ->
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) { work() }
+                    Notifier(this@SettingsActivity).clearAlerts()
+                    Prefs.setEventsSeen(this@SettingsActivity, System.currentTimeMillis())
+                    LiveStatus.bump()
+                    Toast.makeText(this@SettingsActivity, done, Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun confirmDeleteFolder() {

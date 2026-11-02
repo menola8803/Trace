@@ -36,7 +36,8 @@ class CellListActivity : BaseActivity() {
     private enum class Filter(val label: Int) {
         ALL(R.string.filter_all), FLAGGED(R.string.filter_abnormal), MOVING(R.string.filter_moving),
         STRONG(R.string.filter_strong), SHORT(R.string.filter_short), NEW(R.string.filter_new),
-        UNKNOWN(R.string.filter_unknown)
+        UNKNOWN(R.string.filter_unknown), G2(R.string.filter_2g), G3(R.string.filter_3g),
+        G4(R.string.filter_4g), G5(R.string.filter_5g)
     }
 
     private val db by lazy { CellDb.get(this) }
@@ -109,6 +110,10 @@ class CellListActivity : BaseActivity() {
                 Filter.NEW -> e.isNew
                 Filter.MOVING -> e.moving
                 Filter.UNKNOWN -> !e.known
+                Filter.G2 -> Net.of(e.key) == Net.G2
+                Filter.G3 -> Net.of(e.key) == Net.G3
+                Filter.G4 -> Net.of(e.key) == Net.G4
+                Filter.G5 -> Net.of(e.key) == Net.G5
             }
             match && (query.isEmpty() || e.key.contains(query, ignoreCase = true))
         }
@@ -195,7 +200,7 @@ class CellListActivity : BaseActivity() {
         override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
             val v = convertView ?: layoutInflater.inflate(R.layout.item_cell, parent, false)
             val e = shown[position]
-            v.findViewById<TextView>(R.id.cellKey).text = e.key
+            v.findViewById<TextView>(R.id.cellKey).text = Net.label(this@CellListActivity, Net.of(e.key)) + "  " + e.key
             v.findViewById<TextView>(R.id.cellMeta).text =
                 tr(R.string.cells_meta, e.count, e.bestDbm?.toString() ?: "?", fmt(e.lastTs))
 

@@ -80,6 +80,7 @@ class MainActivity : BaseActivity() {
         /** Från den här zoomnivån visas enskilda master, annars kluster. */
         private const val DETAIL_ZOOM = 11.0
         private const val MAX_POINTS = 20_000
+        private const val OWN_MARKER_LIMIT = 400
 
         private val COLOR_KNOWN = Color.rgb(127, 140, 138)
         private val COLOR_OWN = Color.rgb(95, 196, 180)
@@ -273,7 +274,8 @@ class MainActivity : BaseActivity() {
             drawable.setBounds(0, 0, (textPx * 1.5f).toInt(), (textPx * 1.5f).toInt())
             inSpans(ImageSpan(drawable, ImageSpan.ALIGN_BOTTOM)) { append(" ") }
         }
-        mark(dot(COLOR_OWN)); append(" ${getString(R.string.legend_own)}   ")
+        Net.entries.forEach { mark(MapMarks.netDot(this@MainActivity, it, 18f)) }
+        append(" ${getString(R.string.legend_own)}   ")
         mark(dot(COLOR_KNOWN)); append(" ${getString(R.string.legend_known)}   ")
         mark(MapMarks.mastIcon(this@MainActivity, 24f)); append(" ${getString(R.string.legend_mast)}\n")
         mark(MapMarks.icon(this@MainActivity, "!", MapMarks.COLOR_MOVING, 22f)); append(" ${getString(R.string.legend_antenna)}   ")
@@ -540,7 +542,8 @@ class MainActivity : BaseActivity() {
         val first = when {
             !st.running -> getString(R.string.status_off)
             st.note != null -> st.note
-            st.serving != null -> tr(R.string.status_connected, st.serving)
+            st.serving != null -> tr(R.string.status_connected, st.serving) +
+                (st.display?.let { "\n" + tr(R.string.net_line, it) } ?: "")
             else -> getString(R.string.status_searching)
         }
         val lines = mutableListOf(
@@ -817,7 +820,9 @@ class MainActivity : BaseActivity() {
         d.clusters.forEach { overlays.add(clusterMarker(it)) }
         // Din position ritas under markeringarna. Annars döljer figuren cellerna du hört där du står.
         overlays.add(myLocation)
-        if (d.own.isNotEmpty()) overlays.add(ownOverlay(d.own))
+        // Dina celler med nättypens siffra. Är de väldigt många ritas de som enkla prickar.
+        if (d.own.size in 1..OWN_MARKER_LIMIT) d.own.forEach { overlays.add(ownMarker(it)) }
+        else if (d.own.isNotEmpty()) overlays.add(ownOverlay(d.own))
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
         d.masts.forEach { (m, g) -> overlays.add(mastMarker(m, g)) }
@@ -909,6 +914,25 @@ class MainActivity : BaseActivity() {
                 )
             }
         }
+    }
+
+    /** En av dina celler: prick med 2, 3, 4 eller 5 och en ruta med detaljer. */
+    private fun ownMarker(e: CellEntry) = Marker(map).apply {
+        position = GeoPoint(e.lat, e.lon)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        val net = Net.of(e.key)
+        icon = MapMarks.netDot(this@MainActivity, net)
+        relatedObject = "own:${e.key}"
+        title = Net.label(this@MainActivity, net) + " · " + (Operators.fromKey(e.key) ?: "")
+        snippet = listOf(
+            Texts.row(getString(R.string.row_cell), Texts.cellLabel(e.key)),
+            Texts.row(getString(R.string.row_status), e.statusLabel(this@MainActivity)),
+            Texts.row(getString(R.string.row_count), e.count.toString()),
+            Texts.row(getString(R.string.row_best), e.bestDbm?.let { "$it dBm" } ?: getString(R.string.unknown_value)),
+            Texts.row(getString(R.string.row_first), fmt(e.firstTs)),
+            Texts.row(getString(R.string.row_last), fmt(e.lastTs)),
+        ).joinToString("<br>")
+        setInfoWindow(bubble)
     }
 
     private fun servingMarker(e: CellEntry) = Marker(map).apply {

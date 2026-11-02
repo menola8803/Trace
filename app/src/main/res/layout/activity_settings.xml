@@ -122,6 +122,25 @@
                 android:orientation="vertical" />
         </LinearLayout>
 
+        <!-- Nollställ -->
+        <TextView style="@style/Trace.Section" android:text="@string/reset_section" />
+        <LinearLayout style="@style/Trace.Card">
+            <Button
+                android:id="@+id/btnClearMarks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/reset_marks" />
+            <TextView style="@style/Trace.Label" android:layout_marginTop="4dp" android:textSize="12sp" android:text="@string/reset_marks_desc" />
+            <Button
+                android:id="@+id/btnClearAll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/reset_all"
+                android:textColor="@color/danger" />
+            <TextView style="@style/Trace.Label" android:layout_marginTop="4dp" android:textSize="12sp" android:text="@string/reset_all_desc" />
+        </LinearLayout>
+
         <!-- Lagring -->
         <TextView style="@style/Trace.Section" android:text="@string/storage_section" />
         <LinearLayout style="@style/Trace.Card">

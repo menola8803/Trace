@@ -239,6 +239,30 @@
     <string name="replay_back_live">‹  Live map</string>
     <string name="replay_event_hint">Tap an event to replay from just before it.</string>
 
+    <string name="replay_speed_s">%1$d s/s</string>
+    <string name="replay_prev">‹  Previous event</string>
+    <string name="replay_next">Next event  ›</string>
+    <string name="replay_event_of">Event %1$d of %2$d: %3$s %4$s</string>
+
+    <string name="net_line">Network: %1$s</string>
+    <string name="net_5g_nsa">5G (via 4G)</string>
+    <string name="net_5g_plus">5G+ (via 4G)</string>
+    <string name="filter_2g">2G</string>
+    <string name="filter_3g">3G</string>
+    <string name="filter_4g">4G</string>
+    <string name="filter_5g">5G</string>
+
+    <string name="reset_section">RESET</string>
+    <string name="reset_marks">Clear markings</string>
+    <string name="reset_marks_desc">Removes all ! and ? on the map, the event list and the alerts in the notification shade. Measurements are kept.</string>
+    <string name="reset_marks_confirm">All markings, events and alerts will be removed. Measurements and your masts are kept.</string>
+    <string name="reset_marks_done">The markings are removed.</string>
+    <string name="reset_all">Delete all recordings</string>
+    <string name="reset_all_desc">Removes all measurements, cells, events and marked masts. The OpenCellID data and the files in Download/Trace are kept.</string>
+    <string name="reset_all_confirm">Everything you have recorded will be removed and cannot be restored. The OpenCellID data is kept.</string>
+    <string name="reset_all_done">All recordings are removed.</string>
+    <string name="reset_do">Remove</string>
+
     <string name="events_button">Events</string>
     <string name="events_title">Events</string>
     <string name="events_new">%1$d new</string>

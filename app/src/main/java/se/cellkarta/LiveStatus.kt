@@ -12,6 +12,8 @@ object LiveStatus {
         val servingKey: String? = null,
         val lastScan: Long = 0L,
         val note: String? = null,
+        /** Det telefonen visar i statusraden, till exempel "5G (via 4G)". */
+        val display: String? = null,
     )
 
     val state = MutableStateFlow(State())
@@ -30,6 +32,8 @@ object LiveStatus {
     }
 
     fun note(text: String) = state.update { it.copy(note = text) }
+
+    fun display(text: String?) = state.update { it.copy(display = text) }
 
     fun bump() = dataVersion.update { it + 1 }
 }

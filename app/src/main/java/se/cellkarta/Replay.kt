@@ -8,6 +8,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.SeekBar
@@ -31,6 +32,9 @@ import java.time.format.DateTimeFormatter
 /**
  * Spelar upp en dag på kartan, steg för steg: vägen du rörde dig, cellerna där du hörde dem
  * första gången och varje händelse i det ögonblick den inträffade.
+ *
+ * Händelseläge: uppspelningen börjar en stund före händelsen, går långsamt, stannar exakt när
+ * händelsen inträffar, zoomar in och öppnar förklaringsrutan. Förra/Nästa hoppar mellan händelser.
  */
 class Replay(
     private val act: BaseActivity,
@@ -42,9 +46,17 @@ class Replay(
     private val tapOutside: Overlay,
     private val onClose: () -> Unit,
 ) {
-    /** Virtuella sekunder per verklig sekund. */
-    private val speeds = intArrayOf(60, 300, 900, 3600)
-    private var speedIx = 1
+    companion object {
+        private const val TAG = "Trace"
+        /** Virtuella sekunder per verklig sekund. */
+        private val SPEEDS = intArrayOf(10, 30, 60, 300, 900, 3600)
+        private const val DAY_SPEED = 3      // 5 min/s för en hel dag
+        private const val EVENT_SPEED = 1    // 30 s/s runt en händelse
+        /** Händelseläget börjar så här långt före händelsen. */
+        private const val EVENT_LEAD_MS = 3 * 60_000L
+    }
+
+    private var speedIx = DAY_SPEED
 
     private val zone = ZoneId.systemDefault()
     private val clock by lazy { DateTimeFormatter.ofPattern("HH:mm:ss", Lang.locale(act)).withZone(zone) }
@@ -57,6 +69,9 @@ class Replay(
     private val seek = panel.findViewById<SeekBar>(R.id.replaySeek)
     private val btnPlay = panel.findViewById<Button>(R.id.btnReplayPlay)
     private val btnSpeed = panel.findViewById<Button>(R.id.btnReplaySpeed)
+    private val eventRow = panel.findViewById<View>(R.id.replayEventRow)
+    private val btnPrev = panel.findViewById<Button>(R.id.btnReplayPrev)
+    private val btnNext = panel.findViewById<Button>(R.id.btnReplayNext)
 
     private var rows: List<ReplayRow> = emptyList()
     private var path: List<ReplayRow> = emptyList()
@@ -67,13 +82,17 @@ class Replay(
     private var playing = false
     private var lastFrame = 0L
 
+    /** Händelsen som uppspelningen ska stanna vid, och vilken händelse som är vald. */
+    private var stopAt: Long? = null
+    private var focusIx = -1
+
     // Det som hittills har ritats, så att uppspelningen bara lägger till det nya.
     private var rowIx = 0
     private var eventIx = 0
     private val seenCells = HashSet<String>()
     private var cellCount = 0
-    private var lastEventLine = ""
     private val added = ArrayList<Overlay>()
+    private val eventMarkers = HashMap<Int, Marker>()
     private var pathLine: Polyline? = null
     private var position: Marker? = null
 
@@ -84,15 +103,30 @@ class Replay(
     private val tick = object : Runnable {
         override fun run() {
             if (!playing) return
-            val now = SystemClock.uptimeMillis()
-            cur += (now - lastFrame) * speeds[speedIx]
-            lastFrame = now
-            if (cur >= t1) {
-                cur = t1
-                playing = false
+            try {
+                val now = SystemClock.uptimeMillis()
+                val next = cur + (now - lastFrame) * SPEEDS[speedIx]
+                lastFrame = now
+                val stop = stopAt
+                when {
+                    stop != null && next >= stop -> {
+                        cur = stop
+                        render()
+                        arriveAtEvent()
+                        return
+                    }
+                    next >= t1 -> {
+                        cur = t1
+                        playing = false
+                    }
+                    else -> cur = next
+                }
+                render()
+                if (playing) handler.postDelayed(this, 40L) else updateButtons()
+            } catch (e: Exception) {
+                Log.w(TAG, "Uppspelningen stoppades", e)
+                pause()
             }
-            render()
-            if (playing) handler.postDelayed(this, 40L) else updateButtons()
         }
     }
 
@@ -100,23 +134,23 @@ class Replay(
         panel.findViewById<View>(R.id.btnReplayClose).setOnClickListener { close() }
         btnPlay.setOnClickListener { if (playing) pause() else play() }
         btnSpeed.setOnClickListener {
-            speedIx = (speedIx + 1) % speeds.size
+            speedIx = (speedIx + 1) % SPEEDS.size
             updateButtons()
         }
+        btnPrev.setOnClickListener { jumpToEvent(prevEventIx()) }
+        btnNext.setOnClickListener { jumpToEvent(nextEventIx()) }
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 if (!fromUser || t1 <= t0) return
-                val target = t0 + (t1 - t0) * p / 1000L
-                if (target < cur) reset()
-                cur = target
-                render()
+                stopAt = null
+                seekTo(t0 + (t1 - t0) * p / 1000L)
             }
             override fun onStartTrackingTouch(sb: SeekBar) = pause()
             override fun onStopTrackingTouch(sb: SeekBar) {}
         })
     }
 
-    /** Spelar upp dagen. Med startAt börjar uppspelningen två minuter före den tidpunkten. */
+    /** Spelar upp dagen. Med startAt spelas händelsen vid den tidpunkten upp i händelseläge. */
     fun open(day: String, startAt: Long? = null) {
         active = true
         pause()
@@ -126,33 +160,51 @@ class Replay(
         dateText.text = dayFmt.format(LocalDate.parse(day)).replaceFirstChar { it.titlecase(Lang.locale(act)) }
         timeText.text = ""
         infoText.text = act.getString(R.string.preparing)
+        eventRow.visibility = View.GONE
 
         act.lifecycleScope.launch {
-            val from = LocalDate.parse(day).atStartOfDay(zone).toInstant().toEpochMilli()
-            val to = from + 86_400_000L
-            val loaded = withContext(Dispatchers.IO) { db.replayRows(from, to) to db.flagsBetween(from, to) }
-            rows = loaded.first
-            events = loaded.second
-            if (rows.isEmpty()) {
-                infoText.text = act.getString(R.string.replay_empty)
-                return@launch
+            try {
+                val from = LocalDate.parse(day).atStartOfDay(zone).toInstant().toEpochMilli()
+                val to = from + 86_400_000L
+                val loaded = withContext(Dispatchers.IO) { db.replayRows(from, to) to db.flagsBetween(from, to) }
+                rows = loaded.first
+                events = loaded.second
+                if (rows.isEmpty() && events.isEmpty()) {
+                    infoText.text = act.getString(R.string.replay_empty)
+                    return@launch
+                }
+                path = decimate(rows)
+                t0 = minOf(rows.firstOrNull()?.ts ?: Long.MAX_VALUE, events.firstOrNull()?.ts ?: Long.MAX_VALUE)
+                t1 = maxOf(rows.lastOrNull()?.ts ?: 0L, events.lastOrNull()?.ts ?: 0L)
+                eventRow.visibility = if (events.isEmpty()) View.GONE else View.VISIBLE
+
+                val focus = startAt?.let { s -> events.indices.minByOrNull { kotlin.math.abs(events[it].ts - s) } }
+                if (focus != null) {
+                    jumpToEvent(focus)
+                } else {
+                    speedIx = DAY_SPEED
+                    stopAt = null
+                    focusIx = -1
+                    reset()
+                    cur = t0
+                    rows.firstOrNull()?.let {
+                        map.controller.setZoom(16.0)
+                        map.controller.setCenter(GeoPoint(it.lat, it.lon))
+                    }
+                    render()
+                    play()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Kunde inte starta uppspelningen", e)
+                infoText.text = act.getString(R.string.error_generic)
             }
-            path = decimate(rows)
-            t0 = rows.first().ts
-            t1 = maxOf(rows.last().ts, events.lastOrNull()?.ts ?: 0L)
-            reset()
-            cur = if (startAt != null) (startAt - 120_000L).coerceIn(t0, t1) else t0
-            val first = rows.firstOrNull { it.ts >= cur } ?: rows.last()
-            map.controller.setZoom(16.0)
-            map.controller.setCenter(GeoPoint(first.lat, first.lon))
-            render()
-            play()
         }
     }
 
     fun close() {
         pause()
         active = false
+        stopAt = null
         clearOverlays()
         bubble.openKey = null
         InfoWindow.closeAllInfoWindowsOn(map)
@@ -160,12 +212,55 @@ class Replay(
         onClose()
     }
 
-    private fun play() {
-        if (rows.isEmpty()) return
-        if (cur >= t1) {
-            reset()
-            cur = t0
+    // ---- Händelseläge ----
+
+    private fun prevEventIx(): Int {
+        if (events.isEmpty()) return -1
+        val before = events.indexOfLast { it.ts < cur - 1000L }
+        return if (focusIx > 0 && events[focusIx].ts >= cur - 1000L) focusIx - 1 else maxOf(before, 0)
+    }
+
+    private fun nextEventIx(): Int {
+        if (events.isEmpty()) return -1
+        val after = events.indexOfFirst { it.ts > cur + 1000L }
+        return if (after >= 0) after else events.lastIndex
+    }
+
+    /** Börjar en stund före händelsen, spelar långsamt och stannar när den inträffar. */
+    private fun jumpToEvent(ix: Int) {
+        if (ix !in events.indices) return
+        pause()
+        focusIx = ix
+        val f = events[ix]
+        stopAt = f.ts
+        speedIx = EVENT_SPEED
+        seekTo((f.ts - EVENT_LEAD_MS).coerceAtLeast(t0))
+        // Visa platsen redan från början
+        val start = path.lastOrNull { it.ts <= cur } ?: path.firstOrNull()
+        map.controller.setZoom(16.5)
+        map.controller.setCenter(if (start != null) GeoPoint(start.lat, start.lon) else GeoPoint(f.lat, f.lon))
+        play()
+    }
+
+    /** Uppspelningen har nått händelsen: pausa, zooma in och öppna rutan. */
+    private fun arriveAtEvent() {
+        pause()
+        stopAt = null
+        val ix = focusIx.takeIf { it in events.indices } ?: return
+        val f = events[ix]
+        map.controller.animateTo(GeoPoint(f.lat, f.lon), 17.5, 600L)
+        eventMarkers[ix]?.let { m ->
+            bubble.openKey = m.relatedObject as? String
+            m.showInfoWindow()
         }
+        render()
+    }
+
+    // ---- Uppspelning ----
+
+    private fun play() {
+        if (t1 <= t0 && rows.isEmpty()) return
+        if (cur >= t1) seekTo(t0)
         playing = true
         lastFrame = SystemClock.uptimeMillis()
         handler.removeCallbacks(tick)
@@ -179,11 +274,20 @@ class Replay(
         updateButtons()
     }
 
+    private fun seekTo(target: Long) {
+        if (target < cur || added.isEmpty()) reset()
+        cur = target.coerceIn(t0, maxOf(t0, t1))
+        render()
+    }
+
     private fun updateButtons() {
         btnPlay.setText(if (playing) R.string.replay_pause else R.string.replay_play)
-        val s = speeds[speedIx]
-        btnSpeed.text = if (s >= 3600) act.getString(R.string.replay_speed_h)
-        else act.tr(R.string.replay_speed_min, s / 60)
+        val s = SPEEDS[speedIx]
+        btnSpeed.text = when {
+            s >= 3600 -> act.getString(R.string.replay_speed_h)
+            s >= 60 -> act.tr(R.string.replay_speed_min, s / 60)
+            else -> act.tr(R.string.replay_speed_s, s)
+        }
     }
 
     /** En position var 20:e meter eller var minut räcker för att rita vägen. */
@@ -199,6 +303,7 @@ class Replay(
     private fun clearOverlays() {
         map.overlays.removeAll(added.toSet())
         added.clear()
+        eventMarkers.clear()
         pathLine = null
         position = null
         map.invalidate()
@@ -214,7 +319,6 @@ class Replay(
         eventIx = 0
         seenCells.clear()
         cellCount = 0
-        lastEventLine = ""
         map.overlays.add(tapOutside)
 
         pathLine = Polyline(map).apply {
@@ -245,12 +349,11 @@ class Replay(
                 m.position = GeoPoint(here.lat, here.lon)
                 if (m !in added) add(m)
                 // Följ med om du rör dig utanför bilden
-                if (!map.boundingBox.contains(m.position)) map.controller.animateTo(m.position)
+                if (playing && !map.boundingBox.contains(m.position)) map.controller.animateTo(m.position)
             }
         }
 
-        // Nya celler, där du hörde dem första gången
-        var serving: ReplayRow? = null
+        // Nya celler, där du hörde dem första gången, med nättypens siffra och färg
         while (rowIx < rows.size && rows[rowIx].ts <= cur) {
             val r = rows[rowIx]
             if (seenCells.add(r.key)) {
@@ -258,50 +361,44 @@ class Replay(
                 add(Marker(map).apply {
                     position = GeoPoint(r.lat, r.lon)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    icon = cellDot()
-                    title = Texts.cellLabel(r.key)
+                    icon = MapMarks.netDot(act, Net.of(r.key))
+                    title = Net.label(act, Net.of(r.key)) + " · " + Texts.cellLabel(r.key)
                     snippet = clock.format(Instant.ofEpochMilli(r.ts)) + (r.dbm?.let { " · $it dBm" } ?: "")
                     setInfoWindow(bubble)
                 })
             }
             rowIx++
         }
+        var serving: ReplayRow? = null
         for (i in (rowIx - 1) downTo maxOf(0, rowIx - 40)) {
             if (rows[i].registered) { serving = rows[i]; break }
         }
 
-        // Händelser i det ögonblick de inträffade: markeringen och rutan öppnas
+        // Händelser i det ögonblick de inträffade
         while (eventIx < events.size && events[eventIx].ts <= cur) {
-            val f = events[eventIx]
-            val m = eventMarker(f)
+            val m = eventMarker(events[eventIx])
             add(m)
-            m.showInfoWindow()
-            lastEventLine = "? ${clock.format(Instant.ofEpochMilli(f.ts))} · ${Texts.reasonName(act, f.type)}"
+            eventMarkers[eventIx] = m
+            if (stopAt == null && playing) m.showInfoWindow()
             eventIx++
         }
 
         timeText.text = clock.format(Instant.ofEpochMilli(cur))
+        val focus = events.getOrNull(focusIx)
         infoText.text = listOfNotNull(
-            serving?.let { act.tr(R.string.replay_connected, Texts.cellLabel(it.key) + (it.dbm?.let { d -> " · $d dBm" } ?: "")) },
+            focus?.let {
+                act.tr(R.string.replay_event_of, focusIx + 1, events.size, Texts.reasonName(act, it.type),
+                    clock.format(Instant.ofEpochMilli(it.ts)))
+            },
+            serving?.let {
+                act.tr(R.string.replay_connected,
+                    Net.label(act, Net.of(it.key)) + " · " + Texts.cellLabel(it.key) + (it.dbm?.let { d -> " · $d dBm" } ?: ""))
+            },
             act.tr(R.string.replay_cells, cellCount, eventIx),
-            lastEventLine.takeIf { it.isNotEmpty() },
         ).joinToString("\n")
         if (t1 > t0) seek.progress = ((cur - t0) * 1000L / (t1 - t0)).toInt()
+        btnPrev.isEnabled = events.isNotEmpty()
+        btnNext.isEnabled = events.isNotEmpty()
         map.invalidate()
-    }
-
-    private var dot: BitmapDrawable? = null
-    private fun cellDot(): BitmapDrawable = dot ?: run {
-        val size = (16 * density).toInt()
-        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
-        val p = Paint(Paint.ANTI_ALIAS_FLAG)
-        p.color = ContextCompat.getColor(act, R.color.mint)
-        c.drawCircle(size / 2f, size / 2f, size * 0.32f, p)
-        p.style = Paint.Style.STROKE
-        p.strokeWidth = 1.5f * density
-        p.color = Color.WHITE
-        c.drawCircle(size / 2f, size / 2f, size * 0.32f, p)
-        BitmapDrawable(act.resources, bmp).also { dot = it }
     }
 }

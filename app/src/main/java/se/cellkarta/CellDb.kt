@@ -410,6 +410,23 @@ class CellDb private constructor(ctx: Context) :
             }
         }
 
+    /** Tar bort alla händelser och avvikelser. Mätningar och celler finns kvar. */
+    fun clearFlags() {
+        writableDatabase.delete("flags", null, null)
+    }
+
+    /** Tar bort allt du har spelat in: mätningar, celler, händelser och markerade master. */
+    fun clearRecordings() {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            listOf("obs", "seen", "flags", "masts").forEach { db.delete(it, null, null) }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun flagCounts(): Map<String, Int> =
         readableDatabase.rawQuery("SELECT type, COUNT(*) FROM flags GROUP BY type", null).use { c ->
             buildMap { while (c.moveToNext()) put(c.getString(0), c.getInt(1)) }

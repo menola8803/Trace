@@ -70,6 +70,30 @@ object MapMarks {
             bmp
         })
 
+    /** Egen cell: färgad prick med nättypens siffra, 2, 3, 4 eller 5. */
+    fun netDot(ctx: Context, net: Net, sizeDp: Float = 20f): BitmapDrawable = drawable(ctx,
+        cache.getOrPut("net-${net.name}-$sizeDp") {
+            val d = ctx.resources.displayMetrics.density
+            val size = (sizeDp * d).toInt()
+            val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val c = Canvas(bmp)
+            val r = size / 2f
+            val p = Paint(Paint.ANTI_ALIAS_FLAG)
+            p.color = net.color
+            c.drawCircle(r, r, r - 1.2f * d, p)
+            p.style = Paint.Style.STROKE
+            p.strokeWidth = 1.4f * d
+            p.color = Color.argb(230, 15, 26, 28)
+            c.drawCircle(r, r, r - 1.2f * d, p)
+            p.style = Paint.Style.FILL
+            p.textAlign = Paint.Align.CENTER
+            p.textSize = size * 0.58f
+            p.typeface = ResourcesCompat.getFont(ctx, R.font.jakarta_bold)
+            p.color = Color.rgb(15, 26, 28)
+            c.drawText(net.digit, r, r - (p.descent() + p.ascent()) / 2f, p)
+            bmp
+        })
+
     /** Egen mastmarkering: guldring med en sändande mast, i samma stil som Trace-ikonen. */
     fun mastIcon(ctx: Context, sizeDp: Float = 38f): BitmapDrawable = drawable(ctx, cache.getOrPut("mast-$sizeDp") {
         val d = ctx.resources.displayMetrics.density

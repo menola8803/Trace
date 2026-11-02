@@ -53,6 +53,12 @@ class Notifier(private val ctx: Context) {
             .setContentIntent(openApp())
             .build()
 
+    /** Tar bort alla varningar i notislistan. Notisen för pågående inspelning står kvar. */
+    fun clearAlerts() {
+        val sys = ctx.getSystemService(android.app.NotificationManager::class.java)
+        sys.activeNotifications.filter { it.id != ONGOING_ID }.forEach { sys.cancel(it.tag, it.id) }
+    }
+
     @SuppressLint("MissingPermission")
     fun alert(title: String, text: String) {
         if (Build.VERSION.SDK_INT >= 33 &&

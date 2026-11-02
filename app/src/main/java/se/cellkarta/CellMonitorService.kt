@@ -75,6 +75,7 @@ class CellMonitorService : Service(), LocationListener {
         if (!started) {
             started = true
             startLocationUpdates()
+            startDisplayInfo()
             handler.post(tick)
             LiveStatus.setRunning(true)
         }
@@ -84,6 +85,7 @@ class CellMonitorService : Service(), LocationListener {
     override fun onDestroy() {
         handler.removeCallbacks(tick)
         lm.removeUpdates(this)
+        stopDisplayInfo()
         worker.shutdown()
         started = false
         LiveStatus.setRunning(false)
@@ -142,6 +144,55 @@ class CellMonitorService : Service(), LocationListener {
             detector.process(CellReader.parse(list), loc)
         } catch (e: Exception) {
             Log.w(TAG, "Mätningen misslyckades", e)
+        }
+    }
+
+    // ---- Vad statusraden visar: 4G, 4G+, 5G via 4G ----
+
+    private var displayCallback: Any? = null
+
+    private fun startDisplayInfo() {
+        if (android.os.Build.VERSION.SDK_INT < 31) return
+        try {
+            val cb = object : android.telephony.TelephonyCallback(),
+                android.telephony.TelephonyCallback.DisplayInfoListener {
+                override fun onDisplayInfoChanged(info: android.telephony.TelephonyDisplayInfo) {
+                    LiveStatus.display(describeDisplay(info))
+                }
+            }
+            tm.registerTelephonyCallback(mainExecutor, cb)
+            displayCallback = cb
+        } catch (e: Exception) {
+            Log.w(TAG, "Kan inte läsa nättypen från statusraden", e)
+        }
+    }
+
+    private fun stopDisplayInfo() {
+        if (android.os.Build.VERSION.SDK_INT < 31) return
+        (displayCallback as? android.telephony.TelephonyCallback)?.let {
+            runCatching { tm.unregisterTelephonyCallback(it) }
+        }
+        displayCallback = null
+        LiveStatus.display(null)
+    }
+
+    private fun describeDisplay(info: android.telephony.TelephonyDisplayInfo): String? {
+        val o = info.overrideNetworkType
+        return when (o) {
+            android.telephony.TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA -> getString(R.string.net_5g_nsa)
+            android.telephony.TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_ADVANCED -> getString(R.string.net_5g_plus)
+            android.telephony.TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_LTE_CA,
+            android.telephony.TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_LTE_ADVANCED_PRO -> "4G+"
+            else -> when (info.networkType) {
+                TelephonyManager.NETWORK_TYPE_NR -> "5G"
+                TelephonyManager.NETWORK_TYPE_LTE -> "4G"
+                TelephonyManager.NETWORK_TYPE_UMTS, TelephonyManager.NETWORK_TYPE_HSDPA,
+                TelephonyManager.NETWORK_TYPE_HSUPA, TelephonyManager.NETWORK_TYPE_HSPA,
+                TelephonyManager.NETWORK_TYPE_HSPAP, TelephonyManager.NETWORK_TYPE_TD_SCDMA -> "3G"
+                TelephonyManager.NETWORK_TYPE_GSM, TelephonyManager.NETWORK_TYPE_GPRS,
+                TelephonyManager.NETWORK_TYPE_EDGE -> "2G"
+                else -> null
+            }
         }
     }
 
