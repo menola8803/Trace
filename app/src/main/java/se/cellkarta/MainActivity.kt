@@ -562,6 +562,8 @@ class MainActivity : BaseActivity() {
 
         if (d.known.isNotEmpty()) overlays.add(knownOverlay(d.known))
         d.clusters.forEach { overlays.add(clusterMarker(it)) }
+        // Din position ritas under markeringarna. Annars döljer figuren cellerna du hört där du står.
+        overlays.add(myLocation)
         if (d.own.isNotEmpty()) overlays.add(ownOverlay(d.own))
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
@@ -572,7 +574,6 @@ class MainActivity : BaseActivity() {
         d.anomalies.forEach {
             overlays.add(antennaMarker(it, d.tracks[it.key]?.lastOrNull(), flagsByKey[it.key].orEmpty().sortedBy { f -> f.ts }))
         }
-        overlays.add(myLocation)
 
         if (keepOpen != null) {
             overlays.filterIsInstance<Marker>().firstOrNull { it.relatedObject == keepOpen }?.showInfoWindow()
