@@ -48,6 +48,47 @@
             </RadioGroup>
         </LinearLayout>
 
+        <!-- Schemalagd inspelning -->
+        <TextView style="@style/Trace.Section" android:text="@string/sched_section" />
+        <LinearLayout style="@style/Trace.Card">
+            <Switch
+                android:id="@+id/schedEnabled"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/sched_enable"
+                android:textColor="@color/ink"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+                <Button
+                    android:id="@+id/schedFrom"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1" />
+                <Button
+                    android:id="@+id/schedTo"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/schedDays"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal" />
+
+            <TextView android:id="@+id/schedStatus" style="@style/Trace.Label" android:layout_marginTop="12dp" />
+            <TextView style="@style/Trace.Label" android:layout_marginTop="6dp" android:textColor="@color/dim" android:textSize="12sp" android:text="@string/sched_hint" />
+        </LinearLayout>
+
         <!-- Updates -->
         <TextView style="@style/Trace.Section" android:text="@string/updates_section" />
         <LinearLayout style="@style/Trace.Card">

@@ -15,6 +15,7 @@ object Prefs {
     private const val KEY_LANGUAGE = "language"
     private const val KEY_STORAGE_INFO = "storage_info_shown"
     private const val KEY_MAST_TIP = "mast_tip_shown"
+    private const val KEY_EVENTS_SEEN = "events_seen"
     private const val KEY_LAST_UPDATE_CHECK = "last_update_check"
 
     private fun sp(ctx: Context) = ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -45,4 +46,9 @@ object Prefs {
     fun mastTipShown(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_MAST_TIP, false)
 
     fun setMastTipShown(ctx: Context) = sp(ctx).edit { putBoolean(KEY_MAST_TIP, true) }
+
+    /** Tidpunkten då användaren senast tittade på händelselistan. */
+    fun eventsSeen(ctx: Context): Long = sp(ctx).getLong(KEY_EVENTS_SEEN, 0L)
+
+    fun setEventsSeen(ctx: Context, ts: Long) = sp(ctx).edit { putLong(KEY_EVENTS_SEEN, ts) }
 }

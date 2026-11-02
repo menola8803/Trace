@@ -94,6 +94,9 @@ data class Cluster(val lat: Double, val lon: Double, val count: Int)
 
 data class UserMast(val id: Long, val lat: Double, val lon: Double, val ts: Long)
 
+/** En mätning för uppspelningen. */
+data class ReplayRow(val ts: Long, val lat: Double, val lon: Double, val key: String, val dbm: Int?, val registered: Boolean)
+
 data class KnownCell(val key: String, val lat: Double, val lon: Double)
 
 /**
@@ -389,6 +392,20 @@ class CellDb private constructor(ctx: Context) :
                         c.getString(0), c.getInt(1), c.getInt(2), c.getLong(3), c.getLong(4),
                         if (c.isNull(5)) null else c.getInt(5), if (c.isNull(6)) null else c.getInt(6),
                     ))
+                }
+            }
+        }
+
+    /** Alla mätningar mellan två tidpunkter, i tidsordning, för uppspelningen. */
+    fun replayRows(from: Long, to: Long, limit: Int = 60_000): List<ReplayRow> =
+        readableDatabase.rawQuery(
+            "SELECT ts, lat, lon, cell_key, dbm, registered FROM obs WHERE ts >= $from AND ts < $to ORDER BY ts LIMIT $limit",
+            null
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(ReplayRow(c.getLong(0), c.getDouble(1), c.getDouble(2), c.getString(3),
+                        if (c.isNull(4)) null else c.getInt(4), c.getInt(5) == 1))
                 }
             }
         }

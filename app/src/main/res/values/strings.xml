@@ -219,6 +219,41 @@
     <string name="about_abnormal_body">Antenner som rör sig, har onormal styrka, är kortvariga eller saknas i OpenCellID får ett utropstecken. Ett frågetecken visar var det hände.</string>
     <string name="about_version">Version %1$s (build %2$d)</string>
 
+    <!-- Schemalagd inspelning -->
+    <string name="sched_section">SCHEMALAGD INSPELNING</string>
+    <string name="sched_enable">Spela in automatiskt</string>
+    <string name="sched_from">Från %1$s</string>
+    <string name="sched_to">Till %1$s</string>
+    <string name="sched_days">MTOTFLS</string>
+    <string name="sched_off">Av. Slå på för att spela in varje vald dag mellan tiderna.</string>
+    <string name="sched_next">Nästa start: %1$s</string>
+    <string name="sched_active">Spelar in enligt schemat till %1$s</string>
+    <string name="sched_no_days">Välj minst en dag.</string>
+    <string name="sched_hint">Om sluttiden är tidigare än starttiden fortsätter inspelningen till nästa morgon. Dagen gäller när inspelningen börjar.</string>
+    <string name="sched_bg_title">Plats i bakgrunden</string>
+    <string name="sched_bg_message">För att kunna starta inspelningen av sig själv när appen är stängd behöver Trace platsbehörighet hela tiden.\n\nVälj Tillåt alltid på nästa skärm.</string>
+    <string name="sched_bg_continue">Fortsätt</string>
+    <string name="sched_bg_denied">Utan Tillåt alltid kan schemat inte starta inspelningen när appen är stängd.</string>
+    <string name="sched_need_location">Ge appen platsbehörighet först, genom att starta en inspelning på kartan.</string>
+
+    <!-- Uppspelning -->
+    <string name="menu_replay">Spela upp på kartan</string>
+    <string name="replay_choose_day">Välj dag</string>
+    <string name="replay_play">Spela</string>
+    <string name="replay_pause">Paus</string>
+    <string name="replay_speed_min">%1$d min/s</string>
+    <string name="replay_speed_h">1 tim/s</string>
+    <string name="replay_empty">Inga mätningar den dagen.</string>
+    <string name="replay_no_days">Inget att spela upp än. Gör en inspelning först.</string>
+    <string name="replay_connected">Ansluten: %1$s</string>
+    <string name="replay_cells">%1$d celler · %2$d händelser</string>
+
+    <!-- Händelseknappen -->
+    <string name="events_button">Händelser</string>
+    <string name="events_title">Händelser</string>
+    <string name="events_new">%1$d nya</string>
+    <string name="events_none">Inga händelser än.</string>
+
     <!-- Egna master -->
     <string name="legend_mast">Mast</string>
     <string name="mast_title">Mast</string>

@@ -75,6 +75,7 @@ class MainActivity : BaseActivity() {
     companion object {
         const val EXTRA_LAT = "se.cellkarta.LAT"
         const val EXTRA_LON = "se.cellkarta.LON"
+        const val EXTRA_REPLAY_DAY = "se.cellkarta.REPLAY_DAY"
 
         /** Från den här zoomnivån visas enskilda master, annars kluster. */
         private const val DETAIL_ZOOM = 11.0
@@ -104,6 +105,10 @@ class MainActivity : BaseActivity() {
     private var pulse: android.animation.Animator? = null
     private lateinit var myLocation: MyLocationNewOverlay
     private lateinit var bubble: MapMarks.Bubble
+    private lateinit var replay: Replay
+    private val replayBack = object : androidx.activity.OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = replay.close()
+    }
     private val db by lazy { CellDb.get(this) }
     private var refreshJob: Job? = null
     private var counts = Counts()
@@ -162,6 +167,15 @@ class MainActivity : BaseActivity() {
             startActivity(Intent(this, CellListActivity::class.java))
         }
         findViewById<Button>(R.id.btnMore).setOnClickListener { showMoreMenu(it) }
+        findViewById<View>(R.id.btnEvents).setOnClickListener { showEvents() }
+
+        replay = Replay(this, map, db, bubble, findViewById(R.id.replayPanel), ::eventMarker, tapOutside) {
+            replayBack.isEnabled = false
+            findViewById<View>(R.id.panel).visibility = View.VISIBLE
+            scheduleRefresh(0)
+        }
+        findViewById<View>(R.id.btnReplayDay).setOnClickListener { chooseReplayDay() }
+        onBackPressedDispatcher.addCallback(this, replayBack)
 
         // Trace egen startskärm, i samma stil som Direct och Alif. Visas vid varje kallstart.
         if (savedInstanceState == null) {
@@ -196,6 +210,11 @@ class MainActivity : BaseActivity() {
     /** "Visa på kartan" från listan över celler eller loggen per dag. */
     private fun focusFromIntent(intent: Intent?) {
         if (intent == null) return
+        intent.getStringExtra(EXTRA_REPLAY_DAY)?.let { day ->
+            intent.removeExtra(EXTRA_REPLAY_DAY)
+            map.post { startReplay(day) }
+            return
+        }
         val lat = intent.getDoubleExtra(EXTRA_LAT, Double.NaN)
         val lon = intent.getDoubleExtra(EXTRA_LON, Double.NaN)
         if (lat.isNaN() || lon.isNaN()) return
@@ -272,6 +291,10 @@ class MainActivity : BaseActivity() {
         val baseStart = (legend.layoutParams as MarginLayoutParams).leftMargin
         val gear = findViewById<View>(R.id.btnSettings)
         val record = findViewById<View>(R.id.recordWrap)
+        val events = findViewById<View>(R.id.eventWrap)
+        val eventsTop = (events.layoutParams as MarginLayoutParams).topMargin
+        val replayPanel = findViewById<View>(R.id.replayPanel)
+        val replayBottom = replayPanel.paddingBottom
         val recordTop = (record.layoutParams as MarginLayoutParams).topMargin
         val gearTop = (gear.layoutParams as MarginLayoutParams).topMargin
         val gearEnd = (gear.layoutParams as MarginLayoutParams).rightMargin
@@ -292,6 +315,11 @@ class MainActivity : BaseActivity() {
                 topMargin = recordTop + bars.top
                 rightMargin = gearEnd + bars.right
             }
+            events.updateLayoutParams<MarginLayoutParams> {
+                topMargin = eventsTop + bars.top
+                rightMargin = gearEnd + bars.right
+            }
+            replayPanel.updatePadding(bottom = replayBottom + bars.bottom)
             // Kartan börjar under statusraden. Där ovanför syns appens mörka bakgrund,
             // och en tonad övergång leder ner i kartan.
             map.updateLayoutParams<MarginLayoutParams> { topMargin = bars.top }
@@ -354,10 +382,12 @@ class MainActivity : BaseActivity() {
     }
 
     private fun startMonitor() {
+        Schedule.setStartedBySchedule(this, false)
         ContextCompat.startForegroundService(this, Intent(this, CellMonitorService::class.java))
     }
 
     private fun stopMonitor() {
+        Schedule.setStartedBySchedule(this, false)
         stopService(Intent(this, CellMonitorService::class.java))
     }
 
@@ -381,6 +411,7 @@ class MainActivity : BaseActivity() {
     private fun showMoreMenu(anchor: View) {
         val hasKey = Prefs.apiKey(this) != null
         PopupMenu(this, anchor).apply {
+            menu.add(0, 7, 0, R.string.menu_replay)
             menu.add(0, 6, 0, R.string.menu_log)
             menu.add(0, 5, 1, R.string.settings)
             menu.add(0, 1, 2, R.string.menu_download)
@@ -389,6 +420,7 @@ class MainActivity : BaseActivity() {
             menu.add(0, 4, 5, R.string.menu_export)
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
+                    7 -> chooseReplayDay()
                     6 -> startActivity(Intent(this@MainActivity, LogActivity::class.java))
                     5 -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                     1 -> downloadSweden()
@@ -502,6 +534,81 @@ class MainActivity : BaseActivity() {
         status.text = lines.joinToString("\n")
     }
 
+    // ---- Uppspelning ----
+
+    private fun chooseReplayDay() {
+        lifecycleScope.launch {
+            val days = withContext(Dispatchers.IO) { db.days() }
+            if (days.isEmpty()) return@launch toast(getString(R.string.replay_no_days))
+            val fmt = DateTimeFormatter.ofPattern("EEEE d MMMM", Lang.locale(this@MainActivity))
+            val labels = days.map { d ->
+                fmt.format(java.time.LocalDate.parse(d.day)).replaceFirstChar { it.titlecase(Lang.locale(this@MainActivity)) } +
+                    " · " + tr(R.string.n_measurements, d.measurements)
+            }.toTypedArray()
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle(R.string.replay_choose_day)
+                .setItems(labels) { _, i -> startReplay(days[i].day) }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun startReplay(day: String) {
+        refreshJob?.cancel()
+        findViewById<View>(R.id.panel).visibility = View.GONE
+        replayBack.isEnabled = true
+        replay.open(day)
+    }
+
+    // ---- Händelseknappen ----
+
+    private var latestEvents: List<FlagRow> = emptyList()
+
+    /** Knappen syns när något har hänt. Siffran visar händelser sedan du tittade senast. */
+    private fun updateEventButton(events: List<FlagRow>) {
+        latestEvents = events
+        val wrap = findViewById<View>(R.id.eventWrap)
+        val badge = findViewById<TextView>(R.id.eventBadge)
+        if (events.isEmpty()) {
+            wrap.visibility = View.GONE
+            return
+        }
+        val seen = Prefs.eventsSeen(this)
+        val unseen = events.count { it.ts > seen }
+        wrap.visibility = View.VISIBLE
+        findViewById<android.widget.ImageButton>(R.id.btnEvents).setImageDrawable(
+            MapMarks.icon(this, "!", if (unseen > 0) MapMarks.COLOR_MOVING else MapMarks.COLOR_NEW, 34f)
+        )
+        badge.visibility = if (unseen > 0) View.VISIBLE else View.GONE
+        badge.text = if (unseen > 99) "99+" else unseen.toString()
+    }
+
+    private fun showEvents() {
+        val events = latestEvents
+        if (events.isEmpty()) return toast(getString(R.string.events_none))
+        val seen = Prefs.eventsSeen(this)
+        val unseen = events.count { it.ts > seen }
+        val labels = events.map { f ->
+            val mark = if (f.ts > seen) "● " else ""
+            mark + fmt(f.ts) + "\n" + Texts.reasonName(this, f.type) + " · " + Texts.cellLabel(f.key)
+        }.toTypedArray()
+        Prefs.setEventsSeen(this, System.currentTimeMillis())
+        updateEventButton(events)
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.events_title) + if (unseen > 0) " · " + tr(R.string.events_new, unseen) else "")
+            .setItems(labels) { _, i ->
+                val f = events[i]
+                // Visa händelsen på kartan med sin förklaringsruta öppen
+                bubble.openKey = "event:${f.key}:${f.type}:${f.ts}"
+                centeredOnUser = true
+                map.controller.setZoom(17.0)
+                map.controller.setCenter(GeoPoint(f.lat, f.lon))
+                scheduleRefresh(0)
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
     /** Röd punkt när appen inte mäter, stoppfyrkant med pulserande röd ring när den mäter. */
     private fun showRecording(running: Boolean) {
         btnRecord.setImageResource(if (running) R.drawable.ic_record_stop else R.drawable.ic_record)
@@ -529,11 +636,13 @@ class MainActivity : BaseActivity() {
         refreshJob?.cancel()
         refreshJob = lifecycleScope.launch {
             delay(delayMs)
-            if (map.width == 0 || map.height == 0) return@launch
+            if (map.width == 0 || map.height == 0 || replay.active) return@launch
             val box = map.boundingBox
             val zoom = map.zoomLevelDouble
             val data = withContext(Dispatchers.IO) { loadMapData(box, zoom) }
+            if (replay.active) return@launch
             draw(data)
+            updateEventButton(data.events)
             counts = data.counts
             renderStatus(LiveStatus.state.value)
         }

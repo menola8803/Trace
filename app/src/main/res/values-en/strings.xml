@@ -206,6 +206,38 @@
     <string name="about_abnormal_body">Antennas that move, have abnormal strength, are short-lived or are missing from OpenCellID get an exclamation mark. A question mark shows where it happened.</string>
     <string name="about_version">Version %1$s (build %2$d)</string>
 
+    <string name="sched_section">SCHEDULED RECORDING</string>
+    <string name="sched_enable">Record automatically</string>
+    <string name="sched_from">From %1$s</string>
+    <string name="sched_to">To %1$s</string>
+    <string name="sched_days">MTWTFSS</string>
+    <string name="sched_off">Off. Turn on to record every selected day between the times.</string>
+    <string name="sched_next">Next start: %1$s</string>
+    <string name="sched_active">Recording on schedule until %1$s</string>
+    <string name="sched_no_days">Choose at least one day.</string>
+    <string name="sched_hint">If the end time is earlier than the start time, recording continues until the next morning. The day is the day recording starts.</string>
+    <string name="sched_bg_title">Location in the background</string>
+    <string name="sched_bg_message">To start recording by itself while the app is closed, Trace needs location permission all the time.\n\nChoose Allow all the time on the next screen.</string>
+    <string name="sched_bg_continue">Continue</string>
+    <string name="sched_bg_denied">Without Allow all the time, the schedule cannot start recording while the app is closed.</string>
+    <string name="sched_need_location">Give the app location permission first by starting a recording on the map.</string>
+
+    <string name="menu_replay">Replay on map</string>
+    <string name="replay_choose_day">Choose day</string>
+    <string name="replay_play">Play</string>
+    <string name="replay_pause">Pause</string>
+    <string name="replay_speed_min">%1$d min/s</string>
+    <string name="replay_speed_h">1 h/s</string>
+    <string name="replay_empty">No measurements that day.</string>
+    <string name="replay_no_days">Nothing to replay yet. Make a recording first.</string>
+    <string name="replay_connected">Connected: %1$s</string>
+    <string name="replay_cells">%1$d cells · %2$d events</string>
+
+    <string name="events_button">Events</string>
+    <string name="events_title">Events</string>
+    <string name="events_new">%1$d new</string>
+    <string name="events_none">No events yet.</string>
+
     <string name="legend_mast">Mast</string>
     <string name="mast_title">Mast</string>
     <string name="mast_title_op">Mast · %1$s</string>

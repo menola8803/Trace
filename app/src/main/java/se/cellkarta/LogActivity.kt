@@ -108,6 +108,16 @@ class LogActivity : BaseActivity() {
         card.addView(text(tr(R.string.log_day_files, day.day), R.color.dim, 11f).apply {
             setPadding(0, (4 * d).toInt(), 0, 0)
         })
+        card.addView(text("▶  " + getString(R.string.menu_replay), R.color.mint, 13f, bold = true).apply {
+            setPadding(0, (10 * d).toInt(), 0, (2 * d).toInt())
+            setOnClickListener {
+                startActivity(
+                    Intent(this@LogActivity, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        .putExtra(MainActivity.EXTRA_REPLAY_DAY, day.day)
+                )
+            }
+        })
 
         val events = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL

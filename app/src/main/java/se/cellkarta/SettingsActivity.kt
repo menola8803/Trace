@@ -1,6 +1,11 @@
 package se.cellkarta
 
+import android.Manifest
 import android.app.AlertDialog
+import android.app.TimePickerDialog
+import android.content.pm.PackageManager
+import android.view.Gravity
+import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -32,6 +37,17 @@ class SettingsActivity : BaseActivity() {
     private lateinit var updateStatus: TextView
     private lateinit var btnCheck: Button
     private var latest: UpdateChecker.Release? = null
+    private var updatingSchedule = false
+
+    private val backgroundLocation =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) enableSchedule()
+            else {
+                Toast.makeText(this, R.string.sched_bg_denied, Toast.LENGTH_LONG).show()
+                Schedule.setEnabled(this, false)
+                refreshSchedule()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +78,8 @@ class SettingsActivity : BaseActivity() {
             }
         }
 
+        setupSchedule()
+
         // Updates
         findViewById<TextView>(R.id.versionValue).text =
             tr(R.string.version_value, UpdateChecker.currentVersionName(this), UpdateChecker.currentBuild(this))
@@ -88,6 +106,113 @@ class SettingsActivity : BaseActivity() {
         }
         findViewById<View>(R.id.rowAllVersions).setOnClickListener {
             UpdateChecker.open(this, "${UpdateChecker.REPO_URL}/releases")
+        }
+    }
+
+    // ---- Schemalagd inspelning ----
+
+    private fun setupSchedule() {
+        findViewById<Switch>(R.id.schedEnabled).setOnCheckedChangeListener { _, on ->
+            if (updatingSchedule) return@setOnCheckedChangeListener
+            if (on) requestBackgroundThenEnable()
+            else {
+                Schedule.setEnabled(this, false)
+                Schedule.apply(this)
+                refreshSchedule()
+            }
+        }
+        findViewById<Button>(R.id.schedFrom).setOnClickListener {
+            pickTime(Schedule.startMin(this)) { Schedule.setStart(this, it) }
+        }
+        findViewById<Button>(R.id.schedTo).setOnClickListener {
+            pickTime(Schedule.endMin(this)) { Schedule.setEnd(this, it) }
+        }
+
+        val row = findViewById<LinearLayout>(R.id.schedDays)
+        val letters = getString(R.string.sched_days)
+        val d = resources.displayMetrics.density
+        for (i in 0 until 7) {
+            row.addView(TextView(this).apply {
+                text = letters.getOrNull(i)?.toString() ?: ""
+                gravity = Gravity.CENTER
+                textSize = 14f
+                typeface = ResourcesCompat.getFont(this@SettingsActivity, R.font.jakarta_bold)
+                background = ContextCompat.getDrawable(this@SettingsActivity, R.drawable.bg_day_chip)
+                layoutParams = LinearLayout.LayoutParams(0, (38 * d).toInt(), 1f).apply {
+                    marginStart = (3 * d).toInt(); marginEnd = (3 * d).toInt()
+                }
+                setOnClickListener {
+                    Schedule.setDays(this@SettingsActivity, Schedule.days(this@SettingsActivity) xor (1 shl i))
+                    Schedule.apply(this@SettingsActivity)
+                    refreshSchedule()
+                }
+            })
+        }
+        refreshSchedule()
+    }
+
+    private fun pickTime(current: Int, save: (Int) -> Unit) {
+        TimePickerDialog(this, { _, h, m ->
+            save(h * 60 + m)
+            Schedule.apply(this)
+            refreshSchedule()
+        }, current / 60, current % 60, true).show()
+    }
+
+    private fun granted(p: String) = ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED
+
+    private fun requestBackgroundThenEnable() {
+        when {
+            !granted(Manifest.permission.ACCESS_FINE_LOCATION) -> {
+                Toast.makeText(this, R.string.sched_need_location, Toast.LENGTH_LONG).show()
+                refreshSchedule()
+            }
+            granted(Manifest.permission.ACCESS_BACKGROUND_LOCATION) -> enableSchedule()
+            else -> AlertDialog.Builder(this)
+                .setTitle(R.string.sched_bg_title)
+                .setMessage(R.string.sched_bg_message)
+                .setPositiveButton(R.string.sched_bg_continue) { _, _ ->
+                    backgroundLocation.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                }
+                .setNegativeButton(R.string.cancel) { _, _ -> refreshSchedule() }
+                .setOnCancelListener { refreshSchedule() }
+                .show()
+        }
+    }
+
+    private fun enableSchedule() {
+        Schedule.setEnabled(this, true)
+        Schedule.apply(this)
+        refreshSchedule()
+    }
+
+    private fun refreshSchedule() {
+        updatingSchedule = true
+        val on = Schedule.enabled(this)
+        findViewById<Switch>(R.id.schedEnabled).isChecked = on
+        updatingSchedule = false
+
+        findViewById<Button>(R.id.schedFrom).text = tr(R.string.sched_from, Schedule.formatMin(Schedule.startMin(this)))
+        findViewById<Button>(R.id.schedTo).text = tr(R.string.sched_to, Schedule.formatMin(Schedule.endMin(this)))
+
+        val mask = Schedule.days(this)
+        val row = findViewById<LinearLayout>(R.id.schedDays)
+        for (i in 0 until row.childCount) {
+            (row.getChildAt(i) as TextView).apply {
+                isSelected = mask and (1 shl i) != 0
+                setTextColor(ContextCompat.getColor(this@SettingsActivity, if (isSelected) R.color.on_gold else R.color.muted))
+            }
+        }
+
+        val loc = Lang.locale(this)
+        val clock = DateTimeFormatter.ofPattern("HH:mm", loc)
+        val dayClock = DateTimeFormatter.ofPattern("EEE d MMM HH:mm", loc)
+        findViewById<TextView>(R.id.schedStatus).text = when {
+            !on -> getString(R.string.sched_off)
+            mask == 0 -> getString(R.string.sched_no_days)
+            else -> Schedule.activeUntil(this)?.let { tr(R.string.sched_active, clock.format(it)) }
+                ?: Schedule.nextStart(this)?.let { tr(R.string.sched_next, dayClock.format(it)) }
+                ?: getString(R.string.sched_no_days)
         }
     }
 
