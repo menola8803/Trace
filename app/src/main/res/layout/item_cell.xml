@@ -18,7 +18,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:fontFamily="monospace"
-            android:textColor="#2C2C2A"
+            android:textColor="@color/ink"
             android:textSize="14sp" />
 
         <TextView
@@ -26,7 +26,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textColor="#5F5E5A"
+            android:textColor="@color/muted"
             android:textSize="12sp" />
     </LinearLayout>
 

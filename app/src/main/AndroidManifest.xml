@@ -42,6 +42,11 @@
             android:label="Sparade celler" />
 
         <activity
+            android:name=".AboutActivity"
+            android:exported="false"
+            android:label="Om Trace" />
+
+        <activity
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="Inställningar" />

@@ -3,7 +3,7 @@
     android:id="@+id/cellsRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7F6F3"
+    android:background="@color/bg"
     android:orientation="vertical"
     android:paddingTop="16dp"
     android:paddingBottom="8dp">
@@ -12,8 +12,9 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
+        android:fontFamily="@font/jakarta_bold"
         android:text="Sparade celler"
-        android:textColor="#2C2C2A"
+        android:textColor="@color/ink"
         android:textSize="22sp" />
 
     <TextView
@@ -22,7 +23,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:paddingHorizontal="16dp"
-        android:textColor="#5F5E5A"
+        android:textColor="@color/muted"
         android:textSize="13sp" />
 
     <EditText
@@ -68,7 +69,7 @@
             android:id="@+id/list"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:divider="#1A000000"
+            android:divider="@color/line"
             android:dividerHeight="0.5dp" />
 
         <TextView
@@ -78,7 +79,7 @@
             android:layout_gravity="center"
             android:gravity="center"
             android:padding="32dp"
-            android:textColor="#5F5E5A"
+            android:textColor="@color/muted"
             android:textSize="14sp" />
     </FrameLayout>
 </LinearLayout>

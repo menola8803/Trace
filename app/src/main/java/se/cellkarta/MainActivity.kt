@@ -78,13 +78,13 @@ class MainActivity : ComponentActivity() {
         private const val DETAIL_ZOOM = 11.0
         private const val MAX_POINTS = 20_000
 
-        private val COLOR_KNOWN = Color.rgb(95, 94, 90)
+        private val COLOR_KNOWN = Color.rgb(127, 140, 138)
         private val COLOR_NEW = Color.rgb(239, 159, 39)
         private val COLOR_STRONG = Color.rgb(212, 83, 126)
         private val COLOR_SHORT = Color.rgb(29, 158, 117)
         private val COLOR_TRACK = Color.rgb(192, 57, 43)
         private val COLOR_DOWNGRADE = Color.rgb(127, 119, 221)
-        private val COLOR_OWN = Color.rgb(24, 95, 165)
+        private val COLOR_OWN = Color.rgb(95, 196, 180)
 
         private val SV: Locale = Locale.forLanguageTag("sv-SE")
     }
@@ -160,6 +160,19 @@ class MainActivity : ComponentActivity() {
         applyInsets()
         setupMap()
 
+        findViewById<View>(R.id.btnSettings).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+
+        // Trace egen startskärm, i samma stil som Direct och Alif. Visas vid varje kallstart.
+        if (savedInstanceState == null) {
+            val root = findViewById<FrameLayout>(R.id.root)
+            root.addView(
+                StartScreenView(this) { root.removeView(it) },
+                FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            )
+        }
+
         btnStart.setOnClickListener {
             if (LiveStatus.state.value.running) stopMonitor() else requestPermissionsAndStart()
         }
@@ -217,6 +230,11 @@ class MainActivity : ComponentActivity() {
         val baseBottom = panel.paddingBottom
         val baseTop = (legend.layoutParams as MarginLayoutParams).topMargin
         val baseStart = (legend.layoutParams as MarginLayoutParams).leftMargin
+        val gear = findViewById<View>(R.id.btnSettings)
+        val gearTop = (gear.layoutParams as MarginLayoutParams).topMargin
+        val gearEnd = (gear.layoutParams as MarginLayoutParams).rightMargin
+        val scrim = findViewById<View>(R.id.topScrim)
+        val scrimHeight = scrim.layoutParams.height
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root)) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
@@ -225,6 +243,11 @@ class MainActivity : ComponentActivity() {
                 topMargin = baseTop + bars.top
                 leftMargin = baseStart + bars.left
             }
+            gear.updateLayoutParams<MarginLayoutParams> {
+                topMargin = gearTop + bars.top
+                rightMargin = gearEnd + bars.right
+            }
+            scrim.updateLayoutParams { height = scrimHeight + bars.top }
             insets
         }
     }

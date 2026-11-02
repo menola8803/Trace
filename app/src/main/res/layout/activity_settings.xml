@@ -3,7 +3,7 @@
     android:id="@+id/settingsRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F7F6F3"
+    android:background="@color/bg"
     android:paddingTop="16dp"
     android:paddingBottom="16dp">
 
@@ -16,8 +16,9 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/jakarta_bold"
             android:text="Inställningar"
-            android:textColor="#2C2C2A"
+            android:textColor="@color/ink"
             android:textSize="22sp" />
 
         <!-- Updates -->
@@ -26,9 +27,10 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="8dp"
-            android:letterSpacing="0.06"
+            android:fontFamily="@font/jakarta_bold"
+            android:letterSpacing="0.12"
             android:text="UPDATES"
-            android:textColor="#185FA5"
+            android:textColor="@color/gold"
             android:textSize="12sp" />
 
         <LinearLayout
@@ -42,7 +44,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Version"
-                android:textColor="#5F5E5A"
+                android:textColor="@color/muted"
                 android:textSize="13sp" />
 
             <TextView
@@ -50,7 +52,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:textColor="#2C2C2A"
+                android:textColor="@color/ink"
                 android:textSize="18sp" />
 
             <TextView
@@ -58,7 +60,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textColor="#5F5E5A"
+                android:textColor="@color/muted"
                 android:textSize="13sp" />
 
             <Button
@@ -75,19 +77,20 @@
                 android:layout_marginTop="8dp"
                 android:minHeight="48dp"
                 android:text="Sök automatiskt en gång per dygn"
-                android:textColor="#2C2C2A"
+                android:textColor="@color/ink"
                 android:textSize="15sp" />
         </LinearLayout>
 
-        <!-- Om appen -->
+        <!-- Developer -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="8dp"
-            android:letterSpacing="0.06"
-            android:text="OM APPEN"
-            android:textColor="#185FA5"
+            android:fontFamily="@font/jakarta_bold"
+            android:letterSpacing="0.12"
+            android:text="DEVELOPER"
+            android:textColor="@color/gold"
             android:textSize="12sp" />
 
         <LinearLayout
@@ -99,40 +102,65 @@
             android:paddingVertical="4dp">
 
             <LinearLayout
+                android:id="@+id/rowAbout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:paddingVertical="12dp">
 
-                <TextView
-                    android:layout_width="match_parent"
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/trace_logo" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:text="Utvecklare"
-                    android:textColor="#5F5E5A"
-                    android:textSize="13sp" />
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="@font/jakarta_bold"
+                        android:text="Om Trace"
+                        android:textColor="@color/ink"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Developer: Claes Sundman S.N.C AB - 2026"
+                        android:textColor="@color/muted"
+                        android:textSize="13sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="For learning purpose only"
+                        android:textColor="@color/mint"
+                        android:textSize="12sp" />
+                </LinearLayout>
 
                 <TextView
-                    android:layout_width="match_parent"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Claes Sundman S.N.C AB"
-                    android:textColor="#2C2C2A"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:text="For learning purpose only"
-                    android:textColor="#5F5E5A"
-                    android:textSize="13sp"
-                    android:textStyle="italic" />
+                    android:text="›"
+                    android:textColor="@color/gold"
+                    android:textSize="24sp" />
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
-                android:background="#1A000000" />
+                android:background="@color/line" />
 
             <LinearLayout
                 android:id="@+id/rowSource"
@@ -148,7 +176,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Källkod"
-                    android:textColor="#5F5E5A"
+                    android:textColor="@color/muted"
                     android:textSize="13sp" />
 
                 <TextView
@@ -156,14 +184,14 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="github.com/menola8803/Trace"
-                    android:textColor="#185FA5"
+                    android:textColor="@color/mint"
                     android:textSize="16sp" />
             </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="0.5dp"
-                android:background="#1A000000" />
+                android:background="@color/line" />
 
             <LinearLayout
                 android:id="@+id/rowAllVersions"
@@ -179,7 +207,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Alla versioner"
-                    android:textColor="#5F5E5A"
+                    android:textColor="@color/muted"
                     android:textSize="13sp" />
 
                 <TextView
@@ -187,7 +215,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Visa på GitHub"
-                    android:textColor="#185FA5"
+                    android:textColor="@color/mint"
                     android:textSize="16sp" />
             </LinearLayout>
         </LinearLayout>
@@ -197,7 +225,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="Kartdata © OpenStreetMap-bidragsgivare. Celldata © OpenCellID, CC BY-SA 4.0."
-            android:textColor="#888780"
+            android:textColor="@color/dim"
             android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

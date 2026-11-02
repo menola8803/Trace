@@ -1,5 +1,7 @@
 # Trace
 
+<img src="docs/icon.png" width="128" alt="Trace-ikonen">
+
 *For learning purpose only.* Utvecklare: Claes Sundman S.N.C AB.
 
 Android-app som loggar vilka mobilmaster telefonen hör, ritar ut dem på OpenStreetMap
@@ -148,3 +150,9 @@ höj `MOVE_KM`.
   områden i förväg.
 
 Kartdata © OpenStreetMap-bidragsgivare. Celldata © OpenCellID, CC BY-SA 4.0.
+
+## Utseende
+
+Trace delar tema med Direct, Alif och USB: mörk petroleumgrön bakgrund, guld och mint,
+Cinzel i ordmärket och Plus Jakarta Sans i texten. Ikonerna ritas med `python3 scripts/make-icons.py`.
+Typsnitten är licensierade under SIL Open Font License.

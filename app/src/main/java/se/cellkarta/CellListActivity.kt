@@ -197,15 +197,16 @@ class CellListActivity : ComponentActivity() {
             v.findViewById<TextView>(R.id.cellMeta).text =
                 "${e.count} mätningar · starkast ${e.bestDbm ?: "?"} dBm · senast ${fmt(e.lastTs)}"
 
-            val (fg, bg) = when {
-                e.moving -> Color.rgb(121, 31, 31) to Color.rgb(252, 235, 235)
-                e.strong -> Color.rgb(114, 36, 62) to Color.rgb(251, 234, 240)
-                e.shortLived -> Color.rgb(8, 80, 65) to Color.rgb(225, 245, 238)
-                e.isNew -> Color.rgb(99, 56, 6) to Color.rgb(250, 238, 218)
-                e.downgraded -> Color.rgb(60, 52, 137) to Color.rgb(238, 237, 254)
-                e.known -> Color.rgb(68, 68, 65) to Color.rgb(241, 239, 232)
-                else -> Color.rgb(12, 68, 124) to Color.rgb(230, 241, 251)
+            val fg = when {
+                e.moving -> Color.rgb(240, 149, 149)
+                e.strong -> Color.rgb(237, 147, 177)
+                e.shortLived -> Color.rgb(95, 196, 180)
+                e.isNew -> Color.rgb(232, 176, 74)
+                e.downgraded -> Color.rgb(175, 169, 236)
+                e.known -> Color.rgb(183, 198, 195)
+                else -> Color.rgb(243, 217, 160)
             }
+            val bg = Color.argb(46, Color.red(fg), Color.green(fg), Color.blue(fg))
             v.findViewById<TextView>(R.id.cellStatus).apply {
                 text = e.statusLabel
                 setTextColor(fg)
