@@ -68,6 +68,6 @@ jobs:
           NOTES=$(printf 'Version: 0.1.%s\nBuild: %s\nSignerad med fast nyckel: %s\n\nÖppna den här sidan på telefonen, ladda ner Trace.apk och installera.\nByggd från %s.' "$RUN" "$RUN" "$SIGNED" "${GITHUB_SHA::7}")
           gh release delete senaste --yes --cleanup-tag || true
           gh release create senaste Trace.apk \
-            --prerelease \
+            --latest \
             --title "Trace 0.1.$RUN" \
             --notes "$NOTES"
