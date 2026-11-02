@@ -187,7 +187,7 @@
     <string name="update_dialog_message">Version %1$s is available. You have %2$s.\n\nThe file is downloaded in the browser. Open it when it is done and tap Install. Your saved cells and settings are kept.</string>
     <string name="update_later">Later</string>
     <string name="update_no_browser">No browser found. Go to %1$s</string>
-    <string name="changes_title">Latest changes on GitHub</string>
+    <string name="changes_title">Latest changes</string>
     <string name="changes_loading">Loading changes…</string>
     <string name="changes_failed">Could not load the changes right now.</string>
     <string name="developer_section">DEVELOPER</string>
@@ -232,6 +232,12 @@
     <string name="replay_no_days">Nothing to replay yet. Make a recording first.</string>
     <string name="replay_connected">Connected: %1$s</string>
     <string name="replay_cells">%1$d cells · %2$d events</string>
+
+    <string name="replay_button">Replay</string>
+    <string name="replay_title">Replay</string>
+    <string name="replay_whole_day">▶  Replay the whole day</string>
+    <string name="replay_back_live">‹  Live map</string>
+    <string name="replay_event_hint">Tap an event to replay from just before it.</string>
 
     <string name="events_button">Events</string>
     <string name="events_title">Events</string>

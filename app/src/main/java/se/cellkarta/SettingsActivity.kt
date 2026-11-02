@@ -104,9 +104,6 @@ class SettingsActivity : BaseActivity() {
         findViewById<View>(R.id.rowAbout).setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
-        findViewById<View>(R.id.rowAllVersions).setOnClickListener {
-            UpdateChecker.open(this, "${UpdateChecker.REPO_URL}/releases")
-        }
     }
 
     // ---- Schemalagd inspelning ----

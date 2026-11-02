@@ -175,20 +175,6 @@
                     android:textSize="24sp" />
             </LinearLayout>
 
-            <View style="@style/Trace.Divider" android:layout_marginVertical="0dp" />
-
-            <LinearLayout
-                android:id="@+id/rowAllVersions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="?android:attr/selectableItemBackground"
-                android:clickable="true"
-                android:focusable="true"
-                android:orientation="vertical"
-                android:paddingVertical="12dp">
-                <TextView style="@style/Trace.Label" android:text="@string/all_versions" />
-                <TextView style="@style/Trace.Value" android:text="@string/show_on_github" android:textColor="@color/mint" />
-            </LinearLayout>
         </LinearLayout>
 
         <TextView

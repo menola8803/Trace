@@ -32,6 +32,20 @@
         android:textColor="@color/ink"
         android:textSize="12sp" />
 
+    <!-- Under uppspelning: tillbaka till live-kartan, där teckenförklaringen annars sitter -->
+    <Button
+        android:id="@+id/btnBackLive"
+        style="@style/Trace.Button.Primary"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_gravity="top|start"
+        android:layout_marginLeft="12dp"
+        android:layout_marginTop="12dp"
+        android:elevation="4dp"
+        android:paddingHorizontal="18dp"
+        android:text="@string/replay_back_live"
+        android:visibility="gone" />
+
     <ImageButton
         android:id="@+id/btnSettings"
         android:layout_width="48dp"
@@ -69,13 +83,25 @@
             android:src="@drawable/ic_record" />
     </FrameLayout>
 
+    <!-- Uppspelning: öppnar listan med dagar och händelser -->
+    <ImageButton
+        android:id="@+id/btnReplay"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="132dp"
+        android:layout_marginRight="12dp"
+        android:background="@drawable/bg_round_button"
+        android:contentDescription="@string/replay_button"
+        android:src="@drawable/ic_replay" />
+
     <!-- Händelseknapp: syns när något har hänt, med antal nya -->
     <FrameLayout
         android:id="@+id/eventWrap"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_gravity="top|end"
-        android:layout_marginTop="132dp"
+        android:layout_marginTop="192dp"
         android:layout_marginRight="12dp"
         android:clipChildren="false"
         android:visibility="gone">

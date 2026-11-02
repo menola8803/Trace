@@ -169,12 +169,10 @@ class MainActivity : BaseActivity() {
         findViewById<Button>(R.id.btnMore).setOnClickListener { showMoreMenu(it) }
         findViewById<View>(R.id.btnEvents).setOnClickListener { showEvents() }
 
-        replay = Replay(this, map, db, bubble, findViewById(R.id.replayPanel), ::eventMarker, tapOutside) {
-            replayBack.isEnabled = false
-            findViewById<View>(R.id.panel).visibility = View.VISIBLE
-            scheduleRefresh(0)
-        }
+        replay = Replay(this, map, db, bubble, findViewById(R.id.replayPanel), ::eventMarker, tapOutside) { backToLive() }
         findViewById<View>(R.id.btnReplayDay).setOnClickListener { chooseReplayDay() }
+        findViewById<View>(R.id.btnReplay).setOnClickListener { chooseReplayDay() }
+        findViewById<View>(R.id.btnBackLive).setOnClickListener { replay.close() }
         onBackPressedDispatcher.addCallback(this, replayBack)
 
         // Trace egen startskärm, i samma stil som Direct och Alif. Visas vid varje kallstart.
@@ -291,6 +289,9 @@ class MainActivity : BaseActivity() {
         val baseStart = (legend.layoutParams as MarginLayoutParams).leftMargin
         val gear = findViewById<View>(R.id.btnSettings)
         val record = findViewById<View>(R.id.recordWrap)
+        val replayBtn = findViewById<View>(R.id.btnReplay)
+        val replayTop = (replayBtn.layoutParams as MarginLayoutParams).topMargin
+        val live = findViewById<View>(R.id.btnBackLive)
         val events = findViewById<View>(R.id.eventWrap)
         val eventsTop = (events.layoutParams as MarginLayoutParams).topMargin
         val replayPanel = findViewById<View>(R.id.replayPanel)
@@ -314,6 +315,14 @@ class MainActivity : BaseActivity() {
             record.updateLayoutParams<MarginLayoutParams> {
                 topMargin = recordTop + bars.top
                 rightMargin = gearEnd + bars.right
+            }
+            replayBtn.updateLayoutParams<MarginLayoutParams> {
+                topMargin = replayTop + bars.top
+                rightMargin = gearEnd + bars.right
+            }
+            live.updateLayoutParams<MarginLayoutParams> {
+                topMargin = baseTop + bars.top
+                leftMargin = baseStart + bars.left
             }
             events.updateLayoutParams<MarginLayoutParams> {
                 topMargin = eventsTop + bars.top
@@ -536,28 +545,134 @@ class MainActivity : BaseActivity() {
 
     // ---- Uppspelning ----
 
+    /** Listan som öppnas från replay-knappen: ett kort per dag med dagens händelser. */
     private fun chooseReplayDay() {
         lifecycleScope.launch {
-            val days = withContext(Dispatchers.IO) { db.days() }
-            if (days.isEmpty()) return@launch toast(getString(R.string.replay_no_days))
-            val fmt = DateTimeFormatter.ofPattern("EEEE d MMMM", Lang.locale(this@MainActivity))
-            val labels = days.map { d ->
-                fmt.format(java.time.LocalDate.parse(d.day)).replaceFirstChar { it.titlecase(Lang.locale(this@MainActivity)) } +
-                    " · " + tr(R.string.n_measurements, d.measurements)
-            }.toTypedArray()
-            AlertDialog.Builder(this@MainActivity)
-                .setTitle(R.string.replay_choose_day)
-                .setItems(labels) { _, i -> startReplay(days[i].day) }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
+            val data = withContext(Dispatchers.IO) {
+                val zone = ZoneId.systemDefault()
+                db.days().map { d ->
+                    val from = java.time.LocalDate.parse(d.day).atStartOfDay(zone).toInstant().toEpochMilli()
+                    d to db.flagsBetween(from, from + 86_400_000L)
+                }
+            }
+            if (data.isEmpty()) return@launch toast(getString(R.string.replay_no_days))
+            showReplayPicker(data)
         }
     }
 
-    private fun startReplay(day: String) {
+    private fun showReplayPicker(data: List<Pair<DaySummary, List<FlagRow>>>) {
+        val loc = Lang.locale(this)
+        val dayFmt = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", loc)
+        val hm = DateTimeFormatter.ofPattern("HH:mm", loc).withZone(ZoneId.systemDefault())
+        val hms = DateTimeFormatter.ofPattern("HH:mm:ss", loc).withZone(ZoneId.systemDefault())
+        val d = density
+        var dialog: AlertDialog? = null
+
+        fun label(text: String, color: Int, sp: Float, bold: Boolean = false) = TextView(this).apply {
+            this.text = text
+            textSize = sp
+            setTextColor(ContextCompat.getColor(this@MainActivity, color))
+            if (bold) typeface = androidx.core.content.res.ResourcesCompat.getFont(this@MainActivity, R.font.jakarta_bold)
+            setLineSpacing(2f * d, 1f)
+        }
+
+        val list = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            val p = (16 * d).toInt()
+            setPadding(p, (4 * d).toInt(), p, p)
+        }
+        list.addView(label(getString(R.string.replay_event_hint), R.color.dim, 12f).apply {
+            setPadding(0, 0, 0, (4 * d).toInt())
+        })
+
+        data.forEach { (day, events) ->
+            val card = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                background = ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_card)
+                val p = (14 * d).toInt()
+                setPadding(p, p, p, (8 * d).toInt())
+                layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (10 * d).toInt() }
+            }
+            card.addView(label(dayFmt.format(java.time.LocalDate.parse(day.day)).replaceFirstChar { it.titlecase(loc) },
+                R.color.ink, 15f, bold = true))
+            card.addView(label(tr(R.string.log_day_summary, day.measurements, day.cells,
+                hm.format(Instant.ofEpochMilli(day.firstTs)), hm.format(Instant.ofEpochMilli(day.lastTs))),
+                R.color.muted, 12.5f))
+
+            card.addView(label(getString(R.string.replay_whole_day), R.color.mint, 14f, bold = true).apply {
+                minHeight = (44 * d).toInt()
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                background = ContextCompat.getDrawable(this@MainActivity, android.R.drawable.list_selector_background)
+                setOnClickListener { dialog?.dismiss(); startReplay(day.day) }
+            })
+
+            events.forEach { f ->
+                card.addView(android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    minimumHeight = (48 * d).toInt()
+                    background = ContextCompat.getDrawable(this@MainActivity, android.R.drawable.list_selector_background)
+                    addView(android.widget.ImageView(this@MainActivity).apply {
+                        setImageDrawable(MapMarks.icon(this@MainActivity, "?", MapMarks.colorFor(f.type), 28f))
+                        layoutParams = android.widget.LinearLayout.LayoutParams((28 * d).toInt(), (28 * d).toInt())
+                    })
+                    addView(android.widget.LinearLayout(this@MainActivity).apply {
+                        orientation = android.widget.LinearLayout.VERTICAL
+                        layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = (10 * d).toInt() }
+                        addView(label("${hms.format(Instant.ofEpochMilli(f.ts))} · ${Texts.reasonName(this@MainActivity, f.type)}",
+                            R.color.ink, 13f, bold = true))
+                        val detail = Texts.detailText(this@MainActivity, f.type, f.detail)
+                        addView(label(listOf(detail, Texts.cellLabel(f.key)).filter { it.isNotBlank() }.joinToString(" · "),
+                            R.color.muted, 12f))
+                    })
+                    addView(label("▶", R.color.gold, 16f).apply { setPadding((8 * d).toInt(), 0, 0, 0) })
+                    setOnClickListener { dialog?.dismiss(); startReplay(day.day, f.ts) }
+                })
+            }
+        }
+
+        dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.replay_title)
+            .setView(android.widget.ScrollView(this).apply { addView(list) })
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    // Kartläget innan uppspelningen, så att Live-kartan kan återställas exakt.
+    private var savedZoom = 0.0
+    private var savedCenter: GeoPoint? = null
+
+    private fun startReplay(day: String, startAt: Long? = null) {
         refreshJob?.cancel()
-        findViewById<View>(R.id.panel).visibility = View.GONE
+        if (!replay.active) {
+            savedZoom = map.zoomLevelDouble
+            savedCenter = GeoPoint(map.mapCenter.latitude, map.mapCenter.longitude)
+        }
+        showReplayMode(true)
         replayBack.isEnabled = true
-        replay.open(day)
+        replay.open(day, startAt)
+    }
+
+    /** Under uppspelning: Live-knappen ersätter teckenförklaringen och panelen nertill göms. */
+    private fun showReplayMode(on: Boolean) {
+        val live = if (on) View.GONE else View.VISIBLE
+        findViewById<View>(R.id.panel).visibility = live
+        findViewById<View>(R.id.legend).visibility = live
+        findViewById<View>(R.id.btnReplay).visibility = live
+        findViewById<View>(R.id.btnBackLive).visibility = if (on) View.VISIBLE else View.GONE
+        if (on) findViewById<View>(R.id.eventWrap).visibility = View.GONE
+    }
+
+    /** Tillbaka till Live-kartan: samma utsnitt och zoom som före uppspelningen. */
+    private fun backToLive() {
+        replayBack.isEnabled = false
+        showReplayMode(false)
+        savedCenter?.let {
+            map.controller.setZoom(savedZoom)
+            map.controller.setCenter(it)
+        }
+        savedCenter = null
+        scheduleRefresh(0)
     }
 
     // ---- Händelseknappen ----

@@ -116,7 +116,8 @@ class Replay(
         })
     }
 
-    fun open(day: String) {
+    /** Spelar upp dagen. Med startAt börjar uppspelningen två minuter före den tidpunkten. */
+    fun open(day: String, startAt: Long? = null) {
         active = true
         pause()
         InfoWindow.closeAllInfoWindowsOn(map)
@@ -140,9 +141,10 @@ class Replay(
             t0 = rows.first().ts
             t1 = maxOf(rows.last().ts, events.lastOrNull()?.ts ?: 0L)
             reset()
-            cur = t0
+            cur = if (startAt != null) (startAt - 120_000L).coerceIn(t0, t1) else t0
+            val first = rows.firstOrNull { it.ts >= cur } ?: rows.last()
             map.controller.setZoom(16.0)
-            map.controller.setCenter(GeoPoint(rows.first().lat, rows.first().lon))
+            map.controller.setCenter(GeoPoint(first.lat, first.lon))
             render()
             play()
         }

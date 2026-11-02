@@ -199,7 +199,7 @@
     <string name="update_dialog_message">Version %1$s finns att hämta. Du har %2$s.\n\nFilen laddas ner i webbläsaren. Öppna den när den är klar och tryck Installera. Dina sparade celler och inställningar finns kvar.</string>
     <string name="update_later">Senare</string>
     <string name="update_no_browser">Ingen webbläsare hittades. Gå till %1$s</string>
-    <string name="changes_title">Senaste ändringar på GitHub</string>
+    <string name="changes_title">Senaste ändringar</string>
     <string name="changes_loading">Hämtar ändringar…</string>
     <string name="changes_failed">Kunde inte hämta ändringarna just nu.</string>
     <string name="developer_section">DEVELOPER</string>
@@ -247,6 +247,12 @@
     <string name="replay_no_days">Inget att spela upp än. Gör en inspelning först.</string>
     <string name="replay_connected">Ansluten: %1$s</string>
     <string name="replay_cells">%1$d celler · %2$d händelser</string>
+
+    <string name="replay_button">Spela upp</string>
+    <string name="replay_title">Spela upp</string>
+    <string name="replay_whole_day">▶  Spela upp hela dagen</string>
+    <string name="replay_back_live">‹  Live-karta</string>
+    <string name="replay_event_hint">Tryck på en händelse för att spela upp från strax före den.</string>
 
     <!-- Händelseknappen -->
     <string name="events_button">Händelser</string>
