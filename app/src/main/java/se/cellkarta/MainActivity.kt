@@ -109,6 +109,9 @@ class MainActivity : BaseActivity() {
     private val replayBack = object : androidx.activity.OnBackPressedCallback(false) {
         override fun handleOnBackPressed() = replay.close()
     }
+    private val pickerBack = object : androidx.activity.OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = hidePicker()
+    }
     private val db by lazy { CellDb.get(this) }
     private var refreshJob: Job? = null
     private var counts = Counts()
@@ -174,6 +177,9 @@ class MainActivity : BaseActivity() {
         findViewById<View>(R.id.btnReplay).setOnClickListener { chooseReplayDay() }
         findViewById<View>(R.id.btnBackLive).setOnClickListener { replay.close() }
         onBackPressedDispatcher.addCallback(this, replayBack)
+        onBackPressedDispatcher.addCallback(this, pickerBack)
+        findViewById<View>(R.id.pickerScrim).setOnClickListener { hidePicker() }
+        findViewById<View>(R.id.pickerClose).setOnClickListener { hidePicker() }
 
         // Trace egen startskärm, i samma stil som Direct och Alif. Visas vid varje kallstart.
         if (savedInstanceState == null) {
@@ -294,6 +300,10 @@ class MainActivity : BaseActivity() {
         val live = findViewById<View>(R.id.btnBackLive)
         val events = findViewById<View>(R.id.eventWrap)
         val eventsTop = (events.layoutParams as MarginLayoutParams).topMargin
+        val pickerScrim = findViewById<View>(R.id.pickerScrim)
+        val pickerTop = pickerScrim.paddingTop
+        val pickerList = findViewById<View>(R.id.pickerList)
+        val pickerBottom = pickerList.paddingBottom
         val replayPanel = findViewById<View>(R.id.replayPanel)
         val replayBottom = replayPanel.paddingBottom
         val recordTop = (record.layoutParams as MarginLayoutParams).topMargin
@@ -329,6 +339,8 @@ class MainActivity : BaseActivity() {
                 rightMargin = gearEnd + bars.right
             }
             replayPanel.updatePadding(bottom = replayBottom + bars.bottom)
+            pickerScrim.updatePadding(top = pickerTop + bars.top)
+            pickerList.updatePadding(bottom = pickerBottom + bars.bottom)
             // Kartan börjar under statusraden. Där ovanför syns appens mörka bakgrund,
             // och en tonad övergång leder ner i kartan.
             map.updateLayoutParams<MarginLayoutParams> { topMargin = bars.top }
@@ -566,7 +578,6 @@ class MainActivity : BaseActivity() {
         val hm = DateTimeFormatter.ofPattern("HH:mm", loc).withZone(ZoneId.systemDefault())
         val hms = DateTimeFormatter.ofPattern("HH:mm:ss", loc).withZone(ZoneId.systemDefault())
         val d = density
-        var dialog: AlertDialog? = null
 
         fun label(text: String, color: Int, sp: Float, bold: Boolean = false) = TextView(this).apply {
             this.text = text
@@ -576,14 +587,8 @@ class MainActivity : BaseActivity() {
             setLineSpacing(2f * d, 1f)
         }
 
-        val list = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            val p = (16 * d).toInt()
-            setPadding(p, (4 * d).toInt(), p, p)
-        }
-        list.addView(label(getString(R.string.replay_event_hint), R.color.dim, 12f).apply {
-            setPadding(0, 0, 0, (4 * d).toInt())
-        })
+        val list = findViewById<android.widget.LinearLayout>(R.id.pickerList)
+        list.removeAllViews()
 
         data.forEach { (day, events) ->
             val card = android.widget.LinearLayout(this).apply {
@@ -603,7 +608,7 @@ class MainActivity : BaseActivity() {
                 minHeight = (44 * d).toInt()
                 gravity = android.view.Gravity.CENTER_VERTICAL
                 background = ContextCompat.getDrawable(this@MainActivity, android.R.drawable.list_selector_background)
-                setOnClickListener { dialog?.dismiss(); startReplay(day.day) }
+                setOnClickListener { hidePicker(); startReplay(day.day) }
             })
 
             events.forEach { f ->
@@ -626,16 +631,28 @@ class MainActivity : BaseActivity() {
                             R.color.muted, 12f))
                     })
                     addView(label("▶", R.color.gold, 16f).apply { setPadding((8 * d).toInt(), 0, 0, 0) })
-                    setOnClickListener { dialog?.dismiss(); startReplay(day.day, f.ts) }
+                    setOnClickListener { hidePicker(); startReplay(day.day, f.ts) }
                 })
             }
         }
 
-        dialog = AlertDialog.Builder(this)
-            .setTitle(R.string.replay_title)
-            .setView(android.widget.ScrollView(this).apply { addView(list) })
-            .setNegativeButton(R.string.close, null)
-            .show()
+        findViewById<android.widget.ScrollView>(R.id.pickerScroll).scrollTo(0, 0)
+        val scrim = findViewById<View>(R.id.pickerScrim)
+        val sheet = findViewById<View>(R.id.pickerSheet)
+        scrim.alpha = 0f
+        scrim.visibility = View.VISIBLE
+        scrim.animate().alpha(1f).setDuration(180L).start()
+        sheet.translationY = 400f * d
+        sheet.animate().translationY(0f).setDuration(260L)
+            .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+        pickerBack.isEnabled = true
+    }
+
+    private fun hidePicker() {
+        val scrim = findViewById<View>(R.id.pickerScrim)
+        if (scrim.visibility != View.VISIBLE) return
+        pickerBack.isEnabled = false
+        scrim.animate().alpha(0f).setDuration(160L).withEndAction { scrim.visibility = View.GONE }.start()
     }
 
     // Kartläget innan uppspelningen, så att Live-kartan kan återställas exakt.

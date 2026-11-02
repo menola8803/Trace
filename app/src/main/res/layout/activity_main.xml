@@ -269,4 +269,80 @@
                 android:text="@string/replay_choose_day" />
         </LinearLayout>
     </LinearLayout>
+
+    <!-- Lista för uppspelning: glider upp nerifrån, stängs med ✕, tryck ovanför eller tillbaka -->
+    <FrameLayout
+        android:id="@+id/pickerScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#990B1416"
+        android:clickable="true"
+        android:elevation="20dp"
+        android:focusable="true"
+        android:paddingTop="88dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/pickerSheet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@drawable/bg_panel"
+            android:clickable="true"
+            android:focusable="true"
+            android:orientation="vertical"
+            android:paddingTop="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="20dp"
+                android:paddingEnd="8dp">
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:fontFamily="@font/jakarta_bold"
+                    android:text="@string/replay_title"
+                    android:textColor="@color/ink"
+                    android:textSize="20sp" />
+                <TextView
+                    android:id="@+id/pickerClose"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?android:attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/close"
+                    android:gravity="center"
+                    android:text="✕"
+                    android:textColor="@color/muted"
+                    android:textSize="20sp" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="20dp"
+                android:text="@string/replay_event_hint"
+                android:textColor="@color/dim"
+                android:textSize="13sp" />
+
+            <ScrollView
+                android:id="@+id/pickerScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:fadingEdgeLength="24dp"
+                android:requiresFadingEdge="vertical">
+                <LinearLayout
+                    android:id="@+id/pickerList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:paddingBottom="16dp" />
+            </ScrollView>
+        </LinearLayout>
+    </FrameLayout>
 </FrameLayout>
