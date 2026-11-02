@@ -28,12 +28,12 @@ class Notifier(private val ctx: Context) {
     init {
         nm.createNotificationChannel(
             NotificationChannelCompat.Builder(CH_ONGOING, NotificationManagerCompat.IMPORTANCE_LOW)
-                .setName("Övervakning")
+                .setName(ctx.getString(R.string.channel_monitor))
                 .build()
         )
         nm.createNotificationChannel(
             NotificationChannelCompat.Builder(CH_ALERT, NotificationManagerCompat.IMPORTANCE_HIGH)
-                .setName("Varningar")
+                .setName(ctx.getString(R.string.channel_alerts))
                 .build()
         )
     }
@@ -48,7 +48,7 @@ class Notifier(private val ctx: Context) {
         NotificationCompat.Builder(ctx, CH_ONGOING)
             .setSmallIcon(R.drawable.ic_cell)
             .setContentTitle("Trace")
-            .setContentText("Loggar celler och letar efter avvikelser")
+            .setContentText(ctx.getString(R.string.ongoing_text))
             .setOngoing(true)
             .setContentIntent(openApp())
             .build()

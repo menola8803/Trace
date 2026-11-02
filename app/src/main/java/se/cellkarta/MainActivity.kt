@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
+import android.text.style.ImageSpan
 import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
 import android.widget.Button
@@ -23,12 +24,11 @@ import android.widget.FrameLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.text.buildSpannedString
-import androidx.core.text.color
+import androidx.core.text.inSpans
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
@@ -68,7 +68,7 @@ import java.util.Locale
 import kotlin.math.log10
 import kotlin.math.pow
 
-class MainActivity : ComponentActivity() {
+class MainActivity : BaseActivity() {
 
     companion object {
         const val EXTRA_LAT = "se.cellkarta.LAT"
@@ -79,19 +79,11 @@ class MainActivity : ComponentActivity() {
         private const val MAX_POINTS = 20_000
 
         private val COLOR_KNOWN = Color.rgb(127, 140, 138)
-        private val COLOR_NEW = Color.rgb(239, 159, 39)
-        private val COLOR_STRONG = Color.rgb(212, 83, 126)
-        private val COLOR_SHORT = Color.rgb(29, 158, 117)
-        private val COLOR_TRACK = Color.rgb(192, 57, 43)
-        private val COLOR_DOWNGRADE = Color.rgb(127, 119, 221)
         private val COLOR_OWN = Color.rgb(95, 196, 180)
-
-        private val SV: Locale = Locale.forLanguageTag("sv-SE")
+        private val COLOR_TRACK = Color.rgb(226, 75, 74)
     }
 
-    private data class Counts(
-        val known: Long = 0, val seen: Long = 0, val anomalies: Int = 0, val downgrades: Int = 0,
-    )
+    private data class Counts(val known: Long = 0, val seen: Long = 0, val anomalies: Int = 0, val events: Int = 0)
 
     private class MapData(
         val clusters: List<Cluster>,
@@ -99,7 +91,7 @@ class MainActivity : ComponentActivity() {
         val own: List<CellEntry>,
         val anomalies: List<CellEntry>,
         val tracks: Map<String, List<Geo.TrackPoint>>,
-        val downgrades: List<FlagRow>,
+        val events: List<FlagRow>,
         val counts: Counts,
     )
 
@@ -107,13 +99,16 @@ class MainActivity : ComponentActivity() {
     private lateinit var status: TextView
     private lateinit var btnStart: Button
     private lateinit var myLocation: MyLocationNewOverlay
+    private lateinit var bubble: MapMarks.Bubble
     private val db by lazy { CellDb.get(this) }
     private var refreshJob: Job? = null
     private var counts = Counts()
     private var importing = false
     private var centeredOnUser = false
     private val density by lazy { resources.displayMetrics.density }
-    private val timeFmt = DateTimeFormatter.ofPattern("d MMM HH:mm", SV).withZone(ZoneId.systemDefault())
+    private val timeFmt by lazy {
+        DateTimeFormatter.ofPattern("d MMM yyyy HH:mm:ss", Lang.locale(this)).withZone(ZoneId.systemDefault())
+    }
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -121,7 +116,7 @@ class MainActivity : ComponentActivity() {
                 enableMyLocation()
                 startMonitor()
             } else {
-                toast("Appen behöver exakt plats för att kunna läsa cellinformation.")
+                toast(getString(R.string.perm_needed))
             }
         }
 
@@ -146,16 +141,9 @@ class MainActivity : ComponentActivity() {
         map = findViewById(R.id.map)
         status = findViewById(R.id.status)
         btnStart = findViewById(R.id.btnStart)
+        bubble = MapMarks.Bubble(map)
 
-        findViewById<TextView>(R.id.legend).text = buildSpannedString {
-            color(COLOR_OWN) { append("●") }; append(" Dina  ")
-            color(COLOR_KNOWN) { append("●") }; append(" Kända  ")
-            color(COLOR_DOWNGRADE) { append("◆") }; append(" Nedgr.\n")
-            color(COLOR_TRACK) { append("▲") }; append(" Rör sig  ")
-            color(COLOR_STRONG) { append("▲") }; append(" Stark  ")
-            color(COLOR_SHORT) { append("▲") }; append(" Kortvarig  ")
-            color(COLOR_NEW) { append("▲") }; append(" Ny")
-        }
+        findViewById<TextView>(R.id.legend).text = legendText()
 
         applyInsets()
         setupMap()
@@ -163,16 +151,6 @@ class MainActivity : ComponentActivity() {
         findViewById<View>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-
-        // Trace egen startskärm, i samma stil som Direct och Alif. Visas vid varje kallstart.
-        if (savedInstanceState == null) {
-            val root = findViewById<FrameLayout>(R.id.root)
-            root.addView(
-                StartScreenView(this) { root.removeView(it) },
-                FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
-            )
-        }
-
         btnStart.setOnClickListener {
             if (LiveStatus.state.value.running) stopMonitor() else requestPermissionsAndStart()
         }
@@ -180,6 +158,20 @@ class MainActivity : ComponentActivity() {
             startActivity(Intent(this, CellListActivity::class.java))
         }
         findViewById<Button>(R.id.btnMore).setOnClickListener { showMoreMenu(it) }
+
+        // Trace egen startskärm, i samma stil som Direct och Alif. Visas vid varje kallstart.
+        if (savedInstanceState == null) {
+            val root = findViewById<FrameLayout>(R.id.root)
+            root.addView(
+                StartScreenView(this) {
+                    root.removeView(it)
+                    maybeShowStorageInfo()
+                },
+                FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            )
+        } else {
+            maybeShowStorageInfo()
+        }
 
         focusFromIntent(intent)
         autoCheckForUpdate()
@@ -197,13 +189,14 @@ class MainActivity : ComponentActivity() {
         focusFromIntent(intent)
     }
 
-    /** "Visa på kartan" från listan över sparade celler. */
+    /** "Visa på kartan" från listan över celler eller loggen per dag. */
     private fun focusFromIntent(intent: Intent?) {
         if (intent == null) return
         val lat = intent.getDoubleExtra(EXTRA_LAT, Double.NaN)
         val lon = intent.getDoubleExtra(EXTRA_LON, Double.NaN)
         if (lat.isNaN() || lon.isNaN()) return
-        map.controller.setZoom(14.0)
+        centeredOnUser = true
+        map.controller.setZoom(15.0)
         map.controller.setCenter(GeoPoint(lat, lon))
         intent.removeExtra(EXTRA_LAT)
         intent.removeExtra(EXTRA_LON)
@@ -222,7 +215,40 @@ class MainActivity : ComponentActivity() {
         super.onPause()
     }
 
+    // ---- Första start: berätta om mappen i Download ----
+
+    private fun maybeShowStorageInfo() {
+        if (Prefs.storageInfoShown(this)) return
+        lifecycleScope.launch(Dispatchers.IO) { TraceFiles.ensureFolder(this@MainActivity) }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.storage_title)
+            .setMessage(R.string.storage_message)
+            .setCancelable(false)
+            .setPositiveButton(R.string.ok) { _, _ -> Prefs.setStorageInfoShown(this) }
+            .show()
+    }
+
     // ---- Layout ----
+
+    /** Teckenförklaring med samma symboler som på kartan. */
+    private fun legendText() = buildSpannedString {
+        val textPx = (12f * resources.displayMetrics.scaledDensity)
+        fun mark(drawable: BitmapDrawable) {
+            drawable.setBounds(0, 0, (textPx * 1.5f).toInt(), (textPx * 1.5f).toInt())
+            inSpans(ImageSpan(drawable, ImageSpan.ALIGN_BOTTOM)) { append(" ") }
+        }
+        mark(dot(COLOR_OWN)); append(" ${getString(R.string.legend_own)}   ")
+        mark(dot(COLOR_KNOWN)); append(" ${getString(R.string.legend_known)}\n")
+        mark(MapMarks.icon(this@MainActivity, "!", MapMarks.COLOR_MOVING, 22f)); append(" ${getString(R.string.legend_antenna)}   ")
+        mark(MapMarks.icon(this@MainActivity, "?", MapMarks.COLOR_NEW, 22f)); append(" ${getString(R.string.legend_event)}")
+    }
+
+    private fun dot(color: Int): BitmapDrawable {
+        val size = (18 * density).toInt()
+        val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        Canvas(bmp).drawCircle(size / 2f, size / 2f, size * 0.28f, Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color })
+        return BitmapDrawable(resources, bmp)
+    }
 
     private fun applyInsets() {
         val panel = findViewById<View>(R.id.panel)
@@ -320,7 +346,7 @@ class MainActivity : ComponentActivity() {
         if (!Prefs.autoUpdate(this)) return
         if (System.currentTimeMillis() - Prefs.lastUpdateCheck(this) < 24 * 3_600_000L) return
         lifecycleScope.launch {
-            val latest = try { UpdateChecker.latest() } catch (e: Exception) { return@launch }
+            val latest = try { UpdateChecker.latest(this@MainActivity) } catch (e: Exception) { return@launch }
             Prefs.setLastUpdateCheck(this@MainActivity, System.currentTimeMillis())
             if (latest.build > UpdateChecker.currentBuild(this@MainActivity)) {
                 UpdateChecker.offer(this@MainActivity, latest)
@@ -333,13 +359,15 @@ class MainActivity : ComponentActivity() {
     private fun showMoreMenu(anchor: View) {
         val hasKey = Prefs.apiKey(this) != null
         PopupMenu(this, anchor).apply {
-            menu.add(0, 5, 0, "Inställningar")
-            menu.add(0, 1, 0, "Ladda ner Sverige från OpenCellID")
-            menu.add(0, 2, 1, if (hasKey) "OpenCellID-nyckel (sparad)" else "OpenCellID-nyckel…")
-            menu.add(0, 3, 2, "Importera fil…")
-            menu.add(0, 4, 3, "Exportera mätlogg")
+            menu.add(0, 6, 0, R.string.menu_log)
+            menu.add(0, 5, 1, R.string.settings)
+            menu.add(0, 1, 2, R.string.menu_download)
+            menu.add(0, 2, 3, if (hasKey) R.string.menu_key_saved else R.string.menu_key)
+            menu.add(0, 3, 4, R.string.menu_import)
+            menu.add(0, 4, 5, R.string.menu_export)
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
+                    6 -> startActivity(Intent(this@MainActivity, LogActivity::class.java))
                     5 -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                     1 -> downloadSweden()
                     2 -> editApiKey()
@@ -364,53 +392,50 @@ class MainActivity : ComponentActivity() {
             addView(input)
         }
         AlertDialog.Builder(this)
-            .setTitle("OpenCellID-nyckel")
-            .setMessage(
-                "Skapa ett gratis konto på opencellid.org och klistra in din API-nyckel här. " +
-                    "Den sparas bara i appen på den här telefonen."
-            )
+            .setTitle(R.string.key_title)
+            .setMessage(R.string.key_message)
             .setView(box)
-            .setPositiveButton("Spara") { _, _ ->
+            .setPositiveButton(R.string.save) { _, _ ->
                 val key = input.text.toString().trim()
                 Prefs.setApiKey(this, key)
-                if (key.isEmpty()) toast("Nyckeln är borttagen.")
+                if (key.isEmpty()) toast(getString(R.string.key_removed))
                 else {
-                    toast("Nyckeln är sparad.")
+                    toast(getString(R.string.key_saved))
                     if (thenDownload) downloadSweden()
                 }
             }
-            .setNeutralButton("Ta bort") { _, _ ->
+            .setNeutralButton(R.string.remove) { _, _ ->
                 Prefs.setApiKey(this, null)
-                toast("Nyckeln är borttagen.")
+                toast(getString(R.string.key_removed))
             }
-            .setNegativeButton("Avbryt", null)
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
     private fun downloadSweden() {
         val key = Prefs.apiKey(this) ?: return editApiKey(thenDownload = true)
         if (importing) return
-        runReferenceJob("Laddade ner") { progress ->
+        runReferenceJob(R.string.downloaded_n) { progress ->
             OpenCellIdImporter.downloadAndImport(this, key, progress = progress)
         }
     }
 
     private fun runImport(uri: Uri) {
         if (importing) return
-        runReferenceJob("Importerade") { progress ->
+        runReferenceJob(R.string.imported_n) { progress ->
             OpenCellIdImporter.importFile(this, uri, progress)
         }
     }
 
-    private fun runReferenceJob(doneVerb: String, job: suspend (suspend (String) -> Unit) -> Long) {
+    private fun runReferenceJob(doneText: Int, job: suspend (suspend (String) -> Unit) -> Long) {
         importing = true
         lifecycleScope.launch {
-            status.text = "Förbereder…"
+            status.text = getString(R.string.preparing)
             try {
                 val n = job { text -> withContext(Dispatchers.Main) { status.text = text } }
-                toast(String.format(SV, "%s %,d celler.", doneVerb, n))
+                toast(tr(doneText, n))
             } catch (e: Exception) {
-                toast(e.message ?: "Något gick fel.")
+                toast(e.message ?: getString(R.string.error_generic))
             } finally {
                 importing = false
                 LiveStatus.bump()
@@ -424,9 +449,9 @@ class MainActivity : ComponentActivity() {
                 withContext(Dispatchers.IO) {
                     contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { db.exportObservations(it) }
                 }
-                toast("Loggen är sparad.")
+                toast(getString(R.string.log_saved))
             } catch (e: Exception) {
-                toast("Exporten misslyckades: ${e.message}")
+                toast(tr(R.string.export_failed, e.message))
             }
         }
     }
@@ -434,29 +459,23 @@ class MainActivity : ComponentActivity() {
     // ---- Status ----
 
     private fun renderStatus(st: LiveStatus.State) {
-        btnStart.text = if (st.running) "Stoppa" else "Starta"
+        btnStart.setText(if (st.running) R.string.stop else R.string.start)
         if (importing) return
 
         val first = when {
-            !st.running -> "Övervakningen är avstängd."
+            !st.running -> getString(R.string.status_off)
             st.note != null -> st.note
-            st.serving != null -> "Ansluten: ${st.serving}"
-            else -> "Söker celler…"
+            st.serving != null -> tr(R.string.status_connected, st.serving)
+            else -> getString(R.string.status_searching)
         }
         val lines = mutableListOf(
             first,
-            String.format(
-                SV, "Dina celler: %,d · Kända: %,d · Avvikande: %d · Nedgraderingar: %d",
-                counts.seen, counts.known, counts.anomalies, counts.downgrades
-            )
+            tr(R.string.status_counts, counts.seen, counts.known, counts.anomalies, counts.events)
         )
         when {
-            counts.seen == 0L && !st.running ->
-                lines += "Tryck Starta. Cellerna du hör dyker upp som blå prickar där du är."
-            counts.seen == 0L ->
-                lines += "Väntar på första mätningen. Gå gärna ut, GPS:en behöver fri sikt."
-            counts.known == 0L ->
-                lines += "Ladda ner Sverige under Mer för att se kända master och kunna upptäcka nya celler."
+            counts.seen == 0L && !st.running -> lines += getString(R.string.hint_press_start)
+            counts.seen == 0L -> lines += getString(R.string.hint_waiting)
+            counts.known == 0L -> lines += getString(R.string.hint_download)
         }
         status.text = lines.joinToString("\n")
     }
@@ -493,17 +512,11 @@ class MainActivity : ComponentActivity() {
         val anomalies = db.anomalies()
         val tracks = anomalies.filter { it.moving }
             .associate { it.key to Geo.track(db.observations(it.key, 0L, 5000)) }
-        val downgrades = db.flags(CellDb.FLAG_DOWNGRADE, 200)
-        val fc = db.flagCounts()
+        val events = db.allFlags(400)
 
         return MapData(
-            clusters, known, own, anomalies, tracks, downgrades,
-            Counts(
-                db.knownCount(),
-                db.seenCount(),
-                anomalies.size,
-                fc[CellDb.FLAG_DOWNGRADE] ?: 0,
-            )
+            clusters, known, own, anomalies, tracks, events,
+            Counts(db.knownCount(), db.seenCount(), anomalies.size, events.size)
         )
     }
 
@@ -517,10 +530,13 @@ class MainActivity : ComponentActivity() {
         if (d.own.isNotEmpty()) overlays.add(ownOverlay(d.own))
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
-        d.downgrades.forEach { overlays.add(downgradeMarker(it)) }
         d.tracks.forEach { (key, points) -> addTrack(key, points) }
-        // Avvikande antenner ritas sist så att trianglarna hamnar överst.
-        d.anomalies.forEach { overlays.add(anomalyMarker(it, d.tracks[it.key]?.lastOrNull())) }
+        // Frågetecken där det hände, sedan utropstecken på antennerna överst.
+        d.events.forEach { overlays.add(eventMarker(it)) }
+        val flagsByKey = d.events.groupBy { it.key }
+        d.anomalies.forEach {
+            overlays.add(antennaMarker(it, d.tracks[it.key]?.lastOrNull(), flagsByKey[it.key].orEmpty().sortedBy { f -> f.ts }))
+        }
         overlays.add(myLocation)
 
         map.invalidate()
@@ -543,7 +559,7 @@ class MainActivity : ComponentActivity() {
         return SimpleFastPointOverlay(SimplePointTheme(points, false), options).apply {
             setOnClickListener { pts, index ->
                 val p = pts.get(index) as LabelledGeoPoint
-                toast("Känd cell ${p.label}")
+                toast(tr(R.string.known_cell, Texts.cellLabel(p.label)))
             }
         }
     }
@@ -568,7 +584,10 @@ class MainActivity : ComponentActivity() {
             setOnClickListener { pts, index ->
                 val key = (pts.get(index) as LabelledGeoPoint).label
                 val e = byKey[key]
-                toast(if (e == null) key else "$key\n${e.statusLabel} · ${e.count} mätningar · senast ${fmt(e.lastTs)}")
+                toast(
+                    if (e == null) key
+                    else tr(R.string.own_cell_toast, Texts.cellLabel(key), e.statusLabel(this@MainActivity), e.count, fmt(e.lastTs))
+                )
             }
         }
     }
@@ -577,8 +596,13 @@ class MainActivity : ComponentActivity() {
         position = GeoPoint(e.lat, e.lon)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_serving)
-        title = "Ansluten nu"
-        snippet = "${e.key}<br>${e.statusLabel} · ${e.count} mätningar"
+        title = getString(R.string.connected_now)
+        snippet = listOf(
+            Texts.row(getString(R.string.row_cell), Texts.cellLabel(e.key)),
+            Texts.row(getString(R.string.row_best), e.bestDbm?.let { "$it dBm" } ?: getString(R.string.unknown_value)),
+            Texts.row(getString(R.string.row_count), e.count.toString()),
+        ).joinToString("<br>")
+        setInfoWindow(bubble)
     }
 
     private fun clusterMarker(c: Cluster) = Marker(map).apply {
@@ -621,25 +645,53 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Triangel för en avvikande antenn. Färgen visar den viktigaste orsaken:
-     * röd rör sig, rosa onormal styrka, grön kortvarig, gul ny.
-     * En cell som rör sig placeras där den hördes senast.
+     * Utropstecken med ring på en onormal antenn. Ringens färg visar den viktigaste orsaken:
+     * röd rör sig, rosa onormal styrka, grön kortvarig, guld ny. En cell som rör sig visas där den hördes senast.
      */
-    private fun anomalyMarker(e: CellEntry, lastTrackPoint: Geo.TrackPoint?) = Marker(map).apply {
+    private fun antennaMarker(e: CellEntry, lastTrackPoint: Geo.TrackPoint?, events: List<FlagRow>) = Marker(map).apply {
         position = if (lastTrackPoint != null) GeoPoint(lastTrackPoint.lat, lastTrackPoint.lon) else GeoPoint(e.lat, e.lon)
-        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-        icon = ContextCompat.getDrawable(
-            this@MainActivity,
-            when {
-                e.moving -> R.drawable.ic_tri_moving
-                e.strong -> R.drawable.ic_tri_strong
-                e.shortLived -> R.drawable.ic_tri_short
-                else -> R.drawable.ic_new_cell
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        val main = e.reasonTypes.firstOrNull() ?: CellDb.FLAG_NEW
+        icon = MapMarks.icon(this@MainActivity, "!", MapMarks.colorFor(main), 34f)
+        title = "! " + e.reasons(this@MainActivity).joinToString(" · ")
+
+        val ctx = this@MainActivity
+        snippet = buildList {
+            e.reasonTypes.forEach { add(Texts.explanation(ctx, it)) }
+            add("")
+            add(Texts.row(getString(R.string.row_cell), Texts.cellLabel(e.key)))
+            add(Texts.row(getString(R.string.row_first), fmt(e.firstTs)))
+            add(Texts.row(getString(R.string.row_last), fmt(e.lastTs)))
+            add(Texts.row(getString(R.string.row_best), e.bestDbm?.let { "$it dBm" } ?: getString(R.string.unknown_value)))
+            add(Texts.row(getString(R.string.row_count), e.count.toString()))
+            events.forEach { f ->
+                val detail = Texts.detailText(ctx, f.type, f.detail)
+                if (detail.isNotBlank()) add(Texts.row(Texts.reasonName(ctx, f.type), "$detail (${fmt(f.ts)})"))
             }
-        )
-        title = e.reasons.joinToString(" · ")
-        snippet = "${e.key}<br>Först sedd ${fmt(e.firstTs)}<br>Senast sedd ${fmt(e.lastTs)}" +
-            "<br>${e.count} mätningar, starkast ${e.bestDbm ?: "?"} dBm"
+            add("")
+            add("<i>${getString(R.string.expl_not_proof)}</i>")
+        }.joinToString("<br>")
+        setInfoWindow(bubble)
+    }
+
+    /** Frågetecken med ring där avvikelsen upptäcktes, det vill säga där du var. */
+    private fun eventMarker(f: FlagRow) = Marker(map).apply {
+        position = GeoPoint(f.lat, f.lon)
+        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        icon = MapMarks.icon(this@MainActivity, "?", MapMarks.colorFor(f.type), 28f)
+        val ctx = this@MainActivity
+        title = "? " + Texts.eventTitle(ctx, f.type)
+        snippet = buildList {
+            add(Texts.explanation(ctx, f.type))
+            add("")
+            add(Texts.row(getString(R.string.row_time), fmt(f.ts)))
+            Texts.dbm(f.detail)?.let { add(Texts.row(getString(R.string.row_strength), "$it dBm")) }
+            Texts.detailText(ctx, f.type, f.detail).takeIf { it.isNotBlank() }
+                ?.let { add(Texts.row(getString(R.string.row_detail), it)) }
+            add(Texts.row(getString(R.string.row_cell), Texts.cellLabel(f.key)))
+            add(Texts.row(getString(R.string.row_position), String.format(Locale.ROOT, "%.5f, %.5f", f.lat, f.lon)))
+        }.joinToString("<br>")
+        setInfoWindow(bubble)
     }
 
     private fun addTrack(key: String, points: List<Geo.TrackPoint>) {
@@ -653,29 +705,23 @@ class MainActivity : ComponentActivity() {
                 strokeCap = Paint.Cap.ROUND
                 pathEffect = DashPathEffect(floatArrayOf(12f * density, 7f * density), 0f)
             }
-            title = "Cell som flyttat sig"
-            snippet = key
+            title = getString(R.string.track_title)
+            snippet = Texts.cellLabel(key)
+            setInfoWindow(bubble)
         }
         map.overlays.add(line)
 
-        // Den sista punkten visas som triangel av anomalyMarker.
+        // Den sista punkten får antennens utropstecken.
         points.dropLast(1).forEach { p ->
             map.overlays.add(Marker(map).apply {
                 position = GeoPoint(p.lat, p.lon)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                 icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_track_point)
                 title = fmt(p.ts)
-                snippet = "$key<br>Uppskattad position från ${p.samples} mätningar"
+                snippet = Texts.cellLabel(key) + "<br>" + tr(R.string.track_point, p.samples)
+                setInfoWindow(bubble)
             })
         }
-    }
-
-    private fun downgradeMarker(f: FlagRow) = Marker(map).apply {
-        position = GeoPoint(f.lat, f.lon)
-        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-        icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_downgrade)
-        title = "Nedgradering ${fmt(f.ts)}"
-        snippet = "${f.detail ?: ""}<br>${f.key}"
     }
 
     // ---- Hjälpare ----

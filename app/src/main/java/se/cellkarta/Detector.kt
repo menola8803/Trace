@@ -11,7 +11,7 @@ import java.util.Locale
  *
  * Inget av detta bevisar en IMSI-catcher. Det är ledtrådar som är värda att titta närmare på.
  */
-class Detector(private val db: CellDb, private val notifier: Notifier) {
+class Detector(private val ctx: android.content.Context, private val db: CellDb, private val notifier: Notifier) {
 
     companion object {
         /** En vanlig mast hörs sällan längre än så här. Höj värdet om du får falsklarm i glesbygd. */
@@ -56,6 +56,15 @@ class Detector(private val db: CellDb, private val notifier: Notifier) {
         val lon = loc.longitude
         var changed = false
 
+        // Varje mätning sparas också i dagens fil i Download/Trace.
+        val time = java.time.Instant.ofEpochMilli(now).toString()
+        TraceFiles.appendMeasurements(ctx, now, cells.map { c ->
+            String.format(
+                Locale.ROOT, "%s,%s,%s,%.7f,%.7f,%.0f,%s,%d\n",
+                time, c.key, c.radio, lat, lon, loc.accuracy, c.dbm?.toString() ?: "", if (c.registered) 1 else 0
+            )
+        })
+
         for (c in cells) {
             val firstTime = !db.isSeen(c.key)
             db.recordObservation(c, lat, lon, loc.accuracy, now)
@@ -63,8 +72,7 @@ class Detector(private val db: CellDb, private val notifier: Notifier) {
 
             // 1. Ny cell. Utan referensdata vore alla celler "nya", så då varnar vi inte.
             if (firstTime && hasReference && ref == null && !db.hasFlag(c.key, CellDb.FLAG_NEW)) {
-                db.addFlag(c.key, CellDb.FLAG_NEW, now, lat, lon, "Första gången sedd, ${c.dbm ?: "?"} dBm")
-                notifier.alert("Ny okänd cell", "${c.label()} finns inte i referensdatan.")
+                flag(c.key, CellDb.FLAG_NEW, now, lat, lon, "dbm=${c.dbm ?: ""}")
                 changed = true
             }
 
@@ -75,11 +83,8 @@ class Detector(private val db: CellDb, private val notifier: Notifier) {
                 val median = db.medianDbm(c.key, 200)
                 val jump = median != null && median.second >= STRONG_MIN_HISTORY && dbm - median.first >= STRONG_JUMP_DB
                 if (dbm >= limit || jump) {
-                    val detail = if (jump)
-                        "$dbm dBm, ${dbm - median!!.first} dB starkare än vanligt (${median.first} dBm)"
-                    else "$dbm dBm, ovanligt stark signal"
-                    db.addFlag(c.key, CellDb.FLAG_STRONG, now, lat, lon, detail)
-                    notifier.alert("Onormal signalstyrka", "${c.label()}. $detail.")
+                    val detail = if (jump) "dbm=$dbm;jump=${dbm - median!!.first};median=${median.first}" else "dbm=$dbm"
+                    flag(c.key, CellDb.FLAG_STRONG, now, lat, lon, detail)
                     changed = true
                 }
             }
@@ -91,12 +96,10 @@ class Detector(private val db: CellDb, private val notifier: Notifier) {
                 val fromRef = ref?.let { Geo.km(it.first, it.second, lat, lon) } ?: 0.0
 
                 if (farthest > MOVE_KM || fromRef > MOVE_KM) {
-                    val detail = if (farthest > MOVE_KM)
-                        String.format(Locale.ROOT, "Hörd %.0f km isär inom 24 timmar", farthest)
-                    else
-                        String.format(Locale.ROOT, "Hörd %.0f km från sin registrerade position", fromRef)
-                    db.addFlag(c.key, CellDb.FLAG_MOVING, now, lat, lon, detail)
-                    notifier.alert("Cell som verkar flytta sig", "${c.label()}. $detail.")
+                    val detail = (if (farthest > MOVE_KM) "far=%.0f" else "ref=%.0f")
+                        .let { String.format(Locale.ROOT, it, if (farthest > MOVE_KM) farthest else fromRef) } +
+                        ";dbm=${c.dbm ?: ""}"
+                    flag(c.key, CellDb.FLAG_MOVING, now, lat, lon, detail)
                     changed = true
                 }
             }
@@ -115,9 +118,7 @@ class Detector(private val db: CellDb, private val notifier: Notifier) {
             val prevRank = RANK[prev] ?: 0
             val nowRank = RANK[serving.radio] ?: 0
             if (prev != null && prevRank >= 3 && nowRank < 3) {
-                val detail = "$prev → ${serving.radio}"
-                db.addFlag(serving.key, CellDb.FLAG_DOWNGRADE, now, lat, lon, detail)
-                notifier.alert("Nedgradering till ${serving.radio}", "Telefonen gick från $detail. ${serving.label()}.")
+                flag(serving.key, CellDb.FLAG_DOWNGRADE, now, lat, lon, "from=$prev;to=${serving.radio};dbm=${serving.dbm ?: ""}")
                 changed = true
             }
             lastServingRadio = serving.radio
@@ -125,6 +126,18 @@ class Detector(private val db: CellDb, private val notifier: Notifier) {
 
         LiveStatus.scanned(serving?.describe(), serving?.key, now)
         if (changed) LiveStatus.bump()
+    }
+
+    /** Sparar avvikelsen, skriver den till dagens händelsefil och skickar en notis. */
+    private fun flag(key: String, type: String, ts: Long, lat: Double, lon: Double, detail: String) {
+        db.addFlag(key, type, ts, lat, lon, detail)
+        TraceFiles.appendEvent(
+            ctx, ts,
+            String.format(Locale.ROOT, "%s,%s,%s,%.7f,%.7f,%s\n", java.time.Instant.ofEpochMilli(ts), type, key, lat, lon, detail)
+        )
+        val body = listOf(Texts.cellLabel(key), Texts.detailText(ctx, type, detail), Texts.explanation(ctx, type))
+            .filter { it.isNotBlank() }.joinToString(". ")
+        notifier.alert(Texts.alertTitle(ctx, type, detail), body)
     }
 
     private fun checkShortLived(now: Long): Boolean {
@@ -140,9 +153,7 @@ class Detector(private val db: CellDb, private val notifier: Notifier) {
             if (!db.stayedNear(cell.key, cell.lastTs + 5 * 60_000L, cell.lat, cell.lon, SHORT_STAY_KM)) continue
 
             val minutes = ((cell.lastTs - cell.firstTs) / 60_000L).coerceAtLeast(1)
-            val detail = "Fanns i cirka $minutes min och försvann medan du var kvar"
-            db.addFlag(cell.key, CellDb.FLAG_SHORT, now, cell.lat, cell.lon, detail)
-            notifier.alert("Kortvarig cell", "${cell.key}. $detail.")
+            flag(cell.key, CellDb.FLAG_SHORT, now, cell.lat, cell.lon, "min=$minutes;dbm=${cell.bestDbm ?: ""}")
             found = true
         }
         return found

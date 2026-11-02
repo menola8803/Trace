@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="6dp"
+    android:background="@drawable/bg_bubble"
+    android:clickable="true"
+    android:focusable="true"
+    android:minWidth="200dp"
+    android:orientation="vertical"
+    android:paddingHorizontal="14dp"
+    android:paddingTop="12dp"
+    android:paddingBottom="10dp">
+
+    <TextView
+        android:id="@+id/bubbleTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxWidth="262dp"
+        android:fontFamily="@font/jakarta_bold"
+        android:textColor="@color/ink"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/bubbleBody"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:maxWidth="262dp"
+        android:lineSpacingExtra="2dp"
+        android:textColor="@color/muted"
+        android:textSize="12.5sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/tap_to_close"
+        android:textColor="@color/dim"
+        android:textSize="11sp" />
+</LinearLayout>

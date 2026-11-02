@@ -25,8 +25,7 @@ data class CellObs(
 ) {
     val key: String get() = "$radio:$mcc:$mnc:$area:$cid"
 
-    fun label(): String =
-        String.format(Locale.ROOT, "%s %d-%02d · område %d · cell %d", radio, mcc, mnc, area, cid)
+    fun label(): String = Texts.cellLabel(key)
 
     fun describe(): String = label() + (dbm?.let { " · $it dBm" } ?: "")
 }

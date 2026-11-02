@@ -23,7 +23,7 @@
             android:fontFamily="@font/jakarta_bold"
             android:gravity="center_vertical"
             android:paddingHorizontal="4dp"
-            android:text="‹  Om Trace"
+            android:text="@string/about_trace"
             android:textColor="@color/ink"
             android:textSize="18sp" />
 
@@ -52,7 +52,7 @@
             android:layout_marginTop="2dp"
             android:fontFamily="@font/jakarta_bold"
             android:letterSpacing="0.22"
-            android:text="— SER ANTENNERNA RUNT DIG —"
+            android:text="@string/tagline"
             android:textColor="@color/mint"
             android:textSize="11sp" />
 
@@ -74,14 +74,14 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <TextView style="@style/Trace.AboutTitle" android:text="Karta" />
-            <TextView style="@style/Trace.AboutBody" android:text="Varje cell telefonen hör sparas med tid, plats och signalstyrka och ritas på OpenStreetMap, tillsammans med kända master från OpenCellID." />
+            <TextView style="@style/Trace.AboutTitle" android:text="@string/about_map_title" />
+            <TextView style="@style/Trace.AboutBody" android:text="@string/about_map_body" />
 
-            <TextView style="@style/Trace.AboutTitle" android:layout_marginTop="14dp" android:text="Antenner" />
-            <TextView style="@style/Trace.AboutBody" android:text="Se vilken cell du är ansluten till, hur stark signalen är och vilka celler du har hört tidigare." />
+            <TextView style="@style/Trace.AboutTitle" android:layout_marginTop="14dp" android:text="@string/about_antennas_title" />
+            <TextView style="@style/Trace.AboutBody" android:text="@string/about_antennas_body" />
 
-            <TextView style="@style/Trace.AboutTitle" android:layout_marginTop="14dp" android:text="Avvikelser" />
-            <TextView style="@style/Trace.AboutBody" android:text="Celler som rör sig, har onormal styrka, är kortvariga eller saknas i OpenCellID visas som trianglar och ger en notis." />
+            <TextView style="@style/Trace.AboutTitle" android:layout_marginTop="14dp" android:text="@string/about_abnormal_title" />
+            <TextView style="@style/Trace.AboutBody" android:text="@string/about_abnormal_body" />
         </LinearLayout>
 
         <TextView
@@ -96,7 +96,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Developer: Claes Sundman S.N.C AB - 2026"
+            android:text="@string/developer_line"
             android:textColor="@color/muted"
             android:textSize="13sp" />
 
@@ -105,7 +105,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:fontFamily="@font/jakarta_bold"
-            android:text="For learning purpose only"
+            android:text="@string/learning_only"
             android:textColor="@color/mint"
             android:textSize="13sp" />
 
@@ -126,7 +126,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
-            android:text="Kartdata © OpenStreetMap-bidragsgivare. Celldata © OpenCellID, CC BY-SA 4.0."
+            android:text="@string/attribution"
             android:textColor="@color/dim"
             android:textSize="11sp" />
     </LinearLayout>

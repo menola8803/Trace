@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg"
-    android:paddingTop="16dp"
+    android:paddingTop="8dp"
     android:paddingBottom="16dp">
 
     <LinearLayout
@@ -14,93 +14,90 @@
         android:paddingHorizontal="16dp">
 
         <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:id="@+id/btnBack"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackground"
             android:fontFamily="@font/jakarta_bold"
-            android:text="Inställningar"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="4dp"
             android:textColor="@color/ink"
-            android:textSize="22sp" />
+            android:textSize="20sp" />
+
+        <!-- Språk -->
+        <TextView style="@style/Trace.Section" android:layout_marginTop="12dp" android:text="@string/language_section" />
+        <LinearLayout style="@style/Trace.Card" android:paddingVertical="6dp">
+            <RadioGroup
+                android:id="@+id/languageGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+                <RadioButton
+                    android:id="@+id/langSv"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="@string/language_sv"
+                    android:textColor="@color/ink"
+                    android:textSize="16sp" />
+                <RadioButton
+                    android:id="@+id/langEn"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:text="@string/language_en"
+                    android:textColor="@color/ink"
+                    android:textSize="16sp" />
+            </RadioGroup>
+        </LinearLayout>
 
         <!-- Updates -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:fontFamily="@font/jakarta_bold"
-            android:letterSpacing="0.12"
-            android:text="UPDATES"
-            android:textColor="@color/gold"
-            android:textSize="12sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_card"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Version"
-                android:textColor="@color/muted"
-                android:textSize="13sp" />
-
-            <TextView
-                android:id="@+id/versionValue"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/ink"
-                android:textSize="18sp" />
-
-            <TextView
-                android:id="@+id/updateStatus"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:textColor="@color/muted"
-                android:textSize="13sp" />
-
+        <TextView style="@style/Trace.Section" android:text="@string/updates_section" />
+        <LinearLayout style="@style/Trace.Card">
+            <TextView style="@style/Trace.Label" android:text="@string/version" />
+            <TextView android:id="@+id/versionValue" style="@style/Trace.Value" android:textSize="18sp" />
+            <TextView android:id="@+id/updateStatus" style="@style/Trace.Label" android:layout_marginTop="10dp" />
             <Button
                 android:id="@+id/btnCheckUpdate"
+                style="@style/Trace.Button.Primary"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Sök efter uppdatering" />
-
+                android:layout_marginTop="10dp"
+                android:text="@string/update_check" />
             <Switch
                 android:id="@+id/switchAutoUpdate"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:minHeight="48dp"
-                android:text="Sök automatiskt en gång per dygn"
+                android:text="@string/update_auto"
                 android:textColor="@color/ink"
                 android:textSize="15sp" />
+
+            <View style="@style/Trace.Divider" />
+            <TextView style="@style/Trace.Label" android:fontFamily="@font/jakarta_bold" android:textColor="@color/ink" android:text="@string/changes_title" />
+            <LinearLayout
+                android:id="@+id/changesList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- Lagring -->
+        <TextView style="@style/Trace.Section" android:text="@string/storage_section" />
+        <LinearLayout style="@style/Trace.Card">
+            <TextView style="@style/Trace.Value" android:layout_marginTop="0dp" android:fontFamily="@font/jakarta_bold" android:text="@string/storage_path" />
+            <TextView style="@style/Trace.Label" android:layout_marginTop="4dp" android:text="@string/storage_desc" />
+            <Button
+                android:id="@+id/btnDeleteFolder"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/storage_delete"
+                android:textColor="@color/danger" />
         </LinearLayout>
 
         <!-- Developer -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="8dp"
-            android:fontFamily="@font/jakarta_bold"
-            android:letterSpacing="0.12"
-            android:text="DEVELOPER"
-            android:textColor="@color/gold"
-            android:textSize="12sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_card"
-            android:orientation="vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="4dp">
-
+        <TextView style="@style/Trace.Section" android:text="@string/developer_section" />
+        <LinearLayout style="@style/Trace.Card" android:paddingVertical="4dp">
             <LinearLayout
                 android:id="@+id/rowAbout"
                 android:layout_width="match_parent"
@@ -113,8 +110,8 @@
                 android:paddingVertical="12dp">
 
                 <ImageView
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:contentDescription="@null"
                     android:src="@drawable/trace_logo" />
 
@@ -124,29 +121,9 @@
                     android:layout_marginStart="12dp"
                     android:layout_weight="1"
                     android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="@font/jakarta_bold"
-                        android:text="Om Trace"
-                        android:textColor="@color/ink"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Developer: Claes Sundman S.N.C AB - 2026"
-                        android:textColor="@color/muted"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="For learning purpose only"
-                        android:textColor="@color/mint"
-                        android:textSize="12sp" />
+                    <TextView style="@style/Trace.Value" android:layout_marginTop="0dp" android:fontFamily="@font/jakarta_bold" android:text="@string/about_trace" />
+                    <TextView style="@style/Trace.Label" android:text="@string/developer_line" />
+                    <TextView style="@style/Trace.Label" android:fontFamily="@font/jakarta_bold" android:textColor="@color/mint" android:text="@string/learning_only" />
                 </LinearLayout>
 
                 <TextView
@@ -157,10 +134,7 @@
                     android:textSize="24sp" />
             </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="@color/line" />
+            <View style="@style/Trace.Divider" android:layout_marginVertical="0dp" />
 
             <LinearLayout
                 android:id="@+id/rowSource"
@@ -171,27 +145,11 @@
                 android:focusable="true"
                 android:orientation="vertical"
                 android:paddingVertical="12dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Källkod"
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="github.com/menola8803/Trace"
-                    android:textColor="@color/mint"
-                    android:textSize="16sp" />
+                <TextView style="@style/Trace.Label" android:text="@string/source_code" />
+                <TextView style="@style/Trace.Value" android:text="github.com/menola8803/Trace" android:textColor="@color/mint" />
             </LinearLayout>
 
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="@color/line" />
+            <View style="@style/Trace.Divider" android:layout_marginVertical="0dp" />
 
             <LinearLayout
                 android:id="@+id/rowAllVersions"
@@ -202,21 +160,8 @@
                 android:focusable="true"
                 android:orientation="vertical"
                 android:paddingVertical="12dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Alla versioner"
-                    android:textColor="@color/muted"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:text="Visa på GitHub"
-                    android:textColor="@color/mint"
-                    android:textSize="16sp" />
+                <TextView style="@style/Trace.Label" android:text="@string/all_versions" />
+                <TextView style="@style/Trace.Value" android:text="@string/show_on_github" android:textColor="@color/mint" />
             </LinearLayout>
         </LinearLayout>
 
@@ -224,7 +169,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Kartdata © OpenStreetMap-bidragsgivare. Celldata © OpenCellID, CC BY-SA 4.0."
+            android:text="@string/attribution"
             android:textColor="@color/dim"
             android:textSize="12sp" />
     </LinearLayout>

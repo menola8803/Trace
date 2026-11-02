@@ -62,6 +62,10 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
     private val sansBold: Typeface = ResourcesCompat.getFont(context, R.font.jakarta_bold) ?: Typeface.DEFAULT_BOLD
     private val sansMedium: Typeface = ResourcesCompat.getFont(context, R.font.jakarta_medium) ?: Typeface.DEFAULT
 
+    private val tagline = context.getString(R.string.tagline)
+    private val developer = context.getString(R.string.developer_line)
+    private val learning = context.getString(R.string.learning_only_caps)
+
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -76,7 +80,7 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
 
     init {
         isClickable = true
-        contentDescription = "Trace. Developer: Claes Sundman S.N.C AB. For learning purpose only."
+        contentDescription = "Trace. $developer. $learning"
         postDelayed({ finish() }, if (reduce) SHOW_REDUCED_MS else SHOW_MS)
     }
 
@@ -146,9 +150,9 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
         drawLogo(canvas, t)
         drawWordmark(canvas, t)
         drawConnectors(canvas, t)
-        drawFeature(canvas, t, 51f, "KARTA", 850f, 1300f) { c, tt, x, y -> mapIcon(c, tt, x, y) }
-        drawFeature(canvas, t, 159f, "ANTENNER", 1000f, 2000f) { c, tt, x, y -> mastIcon(c, tt, x, y) }
-        drawFeature(canvas, t, 267f, "AVVIKELSER", 1150f, 2700f) { c, tt, x, y -> triangleIcon(c, tt, x, y) }
+        drawFeature(canvas, t, 51f, context.getString(R.string.splash_map), 850f, 1300f) { c, tt, x, y -> mapIcon(c, tt, x, y) }
+        drawFeature(canvas, t, 159f, context.getString(R.string.splash_antennas), 1000f, 2000f) { c, tt, x, y -> mastIcon(c, tt, x, y) }
+        drawFeature(canvas, t, 267f, context.getString(R.string.splash_abnormal), 1150f, 2700f) { c, tt, x, y -> triangleIcon(c, tt, x, y) }
         drawFooter(canvas, t)
 
         canvas.restore()
@@ -297,7 +301,7 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
         text.textSize = 10.5f
         text.letterSpacing = 0.25f
         text.tint(MINT, v)
-        c.drawText("— SER ANTENNERNA RUNT DIG —", CX + 1.3f, 456f + dy, text)
+        c.drawText(tagline, CX + 1.3f, 456f + dy, text)
     }
 
     private fun drawConnectors(c: Canvas, t: Float) {
@@ -423,11 +427,11 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
         text.textSize = 11f
         text.letterSpacing = 0.02f
         text.tint(DIM, v)
-        c.drawText("Developer: Claes Sundman S.N.C AB - 2026", CX, 752f, text)
+        c.drawText(developer, CX, 752f, text)
         text.typeface = sansBold
         text.textSize = 10.5f
         text.letterSpacing = 0.12f
         text.tint(MINT, v)
-        c.drawText("FOR LEARNING PURPOSE ONLY", CX + 0.6f, 772f, text)
+        c.drawText(learning, CX + 0.6f, 772f, text)
     }
 }

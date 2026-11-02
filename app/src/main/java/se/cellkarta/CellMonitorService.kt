@@ -52,12 +52,16 @@ class CellMonitorService : Service(), LocationListener {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(Lang.wrap(newBase))
+    }
+
     override fun onCreate() {
         super.onCreate()
         tm = getSystemService(TelephonyManager::class.java)
         lm = getSystemService(LocationManager::class.java)
         notifier = Notifier(this)
-        detector = Detector(CellDb.get(this), notifier)
+        detector = Detector(this, CellDb.get(this), notifier)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -95,7 +99,7 @@ class CellMonitorService : Service(), LocationListener {
         if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER) &&
             !lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
         ) {
-            LiveStatus.note("Platstjänster är avstängda. Slå på Plats i snabbinställningarna.")
+            LiveStatus.note(getString(R.string.note_location_off))
         }
         lm.getLastKnownLocation(LocationManager.GPS_PROVIDER)?.let { lastLocation = it }
         // minDistance 0: positionen uppdateras även när du står still, annars blir den för gammal.
@@ -115,7 +119,7 @@ class CellMonitorService : Service(), LocationListener {
                 override fun onError(errorCode: Int, detail: Throwable?) = handle(null)
             })
         } catch (e: SecurityException) {
-            LiveStatus.note("Appen saknar behörighet till exakt plats.")
+            LiveStatus.note(getString(R.string.note_no_permission))
         }
     }
 
@@ -128,8 +132,8 @@ class CellMonitorService : Service(), LocationListener {
             System.currentTimeMillis() - loc.time > MAX_LOCATION_AGE_MS
         ) {
             LiveStatus.note(
-                if (loc == null) "Väntar på position. Gå gärna närmare ett fönster eller ut."
-                else "Väntar på exaktare position (just nu ±${loc.accuracy.toInt()} m)…"
+                if (loc == null) getString(R.string.note_wait_position)
+                else tr(R.string.note_wait_accuracy, loc.accuracy.toInt())
             )
             return
         }
@@ -154,7 +158,7 @@ class CellMonitorService : Service(), LocationListener {
     override fun onProviderEnabled(provider: String) {}
     override fun onProviderDisabled(provider: String) {
         if (provider == LocationManager.GPS_PROVIDER) {
-            LiveStatus.note("GPS är avstängd. Slå på Plats i snabbinställningarna.")
+            LiveStatus.note(getString(R.string.note_gps_off))
         }
     }
     @Deprecated("Krävs på äldre Android")

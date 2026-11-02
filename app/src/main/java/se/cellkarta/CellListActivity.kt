@@ -16,7 +16,6 @@ import android.widget.EditText
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -32,16 +31,18 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /** Lista över alla cell-ID:n som appen har sparat, med sök, filter och export. */
-class CellListActivity : ComponentActivity() {
+class CellListActivity : BaseActivity() {
 
-    private enum class Filter(val label: String) {
-        ALL("Alla"), FLAGGED("Avvikande"), MOVING("Rör sig"), STRONG("Stark"), SHORT("Kortvarig"),
-        NEW("Nya"), UNKNOWN("Ej i referens")
+    private enum class Filter(val label: Int) {
+        ALL(R.string.filter_all), FLAGGED(R.string.filter_abnormal), MOVING(R.string.filter_moving),
+        STRONG(R.string.filter_strong), SHORT(R.string.filter_short), NEW(R.string.filter_new),
+        UNKNOWN(R.string.filter_unknown)
     }
 
     private val db by lazy { CellDb.get(this) }
-    private val sv: Locale = Locale.forLanguageTag("sv-SE")
-    private val timeFmt = DateTimeFormatter.ofPattern("d MMM HH:mm", sv).withZone(ZoneId.systemDefault())
+    private val timeFmt by lazy {
+        DateTimeFormatter.ofPattern("d MMM yyyy HH:mm", Lang.locale(this)).withZone(ZoneId.systemDefault())
+    }
 
     private var all: List<CellEntry> = emptyList()
     private var shown: List<CellEntry> = emptyList()
@@ -77,7 +78,7 @@ class CellListActivity : ComponentActivity() {
             applyFilter()
         }
         findViewById<Button>(R.id.btnExportCells).setOnClickListener {
-            exportLauncher.launch("trace-celler.csv")
+            exportLauncher.launch("trace-cells.csv")
         }
 
         val root = findViewById<View>(R.id.cellsRoot)
@@ -111,14 +112,14 @@ class CellListActivity : ComponentActivity() {
             }
             match && (query.isEmpty() || e.key.contains(query, ignoreCase = true))
         }
-        btnFilter.text = "Visa: ${filter.label}"
-        summary.text = String.format(
-            sv, "%,d sparade celler · %,d avvikande · visar %,d",
+        btnFilter.text = tr(R.string.cells_show, getString(filter.label))
+        summary.text = tr(
+            R.string.cells_summary,
             all.size, all.count { it.anomalous }, shown.size
         )
         empty.text = if (all.isEmpty())
-            "Inga celler sparade än. Starta övervakningen på kartan, så sparas varje cell-ID som telefonen hör."
-        else "Inga celler matchar sökningen."
+            getString(R.string.cells_empty)
+        else getString(R.string.cells_no_match)
         adapter.notifyDataSetChanged()
     }
 
@@ -127,25 +128,26 @@ class CellListActivity : ComponentActivity() {
     private fun showDetails(e: CellEntry) {
         val parts = e.key.split(':')
         val text = buildString {
-            appendLine("Status: ${if (e.reasons.isEmpty()) e.statusLabel else e.reasons.joinToString(", ")}")
+            val ctx = this@CellListActivity
+            appendLine("${getString(R.string.row_status)}: " + (if (e.reasonTypes.isEmpty()) e.statusLabel(ctx) else e.reasons(ctx).joinToString(", ")))
             if (parts.size == 5) {
-                appendLine("Nät: ${parts[0]}")
-                appendLine("Land och operatör: ${parts[1]}-${parts[2].padStart(2, '0')}")
-                appendLine("Område (LAC/TAC): ${parts[3]}")
-                appendLine("Cell-ID: ${parts[4]}")
+                appendLine("${getString(R.string.row_network)}: ${parts[0]}")
+                appendLine("${getString(R.string.row_operator)}: ${parts[1]}-${parts[2].padStart(2, '0')}")
+                appendLine("${getString(R.string.row_area)}: ${parts[3]}")
+                appendLine("${getString(R.string.row_cell_id)}: ${parts[4]}")
             }
-            appendLine("Först sedd: ${fmt(e.firstTs)}")
-            appendLine("Senast sedd: ${fmt(e.lastTs)}")
-            appendLine("Mätningar: ${e.count}")
-            appendLine("Starkaste signal: ${e.bestDbm?.let { "$it dBm" } ?: "okänd"}")
-            appendLine(String.format(Locale.ROOT, "Uppskattad position: %.5f, %.5f", e.lat, e.lon))
-            if (!e.known) appendLine("\nCellen finns inte i den importerade OpenCellID-datan.")
+            appendLine("${getString(R.string.row_first)}: ${fmt(e.firstTs)}")
+            appendLine("${getString(R.string.row_last)}: ${fmt(e.lastTs)}")
+            appendLine("${getString(R.string.row_count)}: ${e.count}")
+            appendLine("${getString(R.string.row_best)}: ${e.bestDbm?.let { "$it dBm" } ?: getString(R.string.unknown_value)}")
+            appendLine(String.format(Locale.ROOT, "${getString(R.string.row_position)}: %.5f, %.5f", e.lat, e.lon))
+            if (!e.known) appendLine("\n" + getString(R.string.cells_not_in_ref))
         }
 
         AlertDialog.Builder(this)
-            .setTitle(e.key)
+            .setTitle(Texts.cellLabel(e.key))
             .setMessage(text.trim())
-            .setPositiveButton("Visa på kartan") { _, _ ->
+            .setPositiveButton(R.string.log_show_on_map) { _, _ ->
                 startActivity(
                     Intent(this, MainActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -153,12 +155,12 @@ class CellListActivity : ComponentActivity() {
                         .putExtra(MainActivity.EXTRA_LON, e.lon)
                 )
             }
-            .setNeutralButton("Kopiera ID") { _, _ ->
+            .setNeutralButton(R.string.cells_copy_id) { _, _ ->
                 getSystemService(ClipboardManager::class.java)
                     .setPrimaryClip(ClipData.newPlainText("Cell-ID", e.key))
-                Toast.makeText(this, "Cell-ID kopierat", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, R.string.cells_copied, Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Stäng", null)
+            .setNegativeButton(R.string.close, null)
             .show()
     }
 
@@ -168,19 +170,19 @@ class CellListActivity : ComponentActivity() {
             try {
                 withContext(Dispatchers.IO) {
                     contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { w ->
-                        w.write("cell,radio,status,forst_sedd_utc,senast_sedd_utc,matningar,starkast_dbm,lat,lon\n")
+                        w.write("cell,radio,status,first_seen_utc,last_seen_utc,measurements,strongest_dbm,lat,lon\n")
                         for (e in rows) {
                             w.write(
-                                "${e.key},${e.radio},${e.statusLabel},${Instant.ofEpochMilli(e.firstTs)}," +
+                                "${e.key},${e.radio},${e.reasonTypes.joinToString("+").ifEmpty { if (e.known) "KNOWN" else "UNKNOWN" }},${Instant.ofEpochMilli(e.firstTs)}," +
                                     "${Instant.ofEpochMilli(e.lastTs)},${e.count},${e.bestDbm ?: ""}," +
                                     String.format(Locale.ROOT, "%.6f,%.6f\n", e.lat, e.lon)
                             )
                         }
                     }
                 }
-                Toast.makeText(this@CellListActivity, "Listan är sparad (${rows.size} celler).", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@CellListActivity, tr(R.string.cells_saved_n, rows.size), Toast.LENGTH_LONG).show()
             } catch (ex: Exception) {
-                Toast.makeText(this@CellListActivity, "Exporten misslyckades: ${ex.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@CellListActivity, tr(R.string.export_failed, ex.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -195,7 +197,7 @@ class CellListActivity : ComponentActivity() {
             val e = shown[position]
             v.findViewById<TextView>(R.id.cellKey).text = e.key
             v.findViewById<TextView>(R.id.cellMeta).text =
-                "${e.count} mätningar · starkast ${e.bestDbm ?: "?"} dBm · senast ${fmt(e.lastTs)}"
+                tr(R.string.cells_meta, e.count, e.bestDbm?.toString() ?: "?", fmt(e.lastTs))
 
             val fg = when {
                 e.moving -> Color.rgb(240, 149, 149)
@@ -208,7 +210,7 @@ class CellListActivity : ComponentActivity() {
             }
             val bg = Color.argb(46, Color.red(fg), Color.green(fg), Color.blue(fg))
             v.findViewById<TextView>(R.id.cellStatus).apply {
-                text = e.statusLabel
+                text = e.statusLabel(this@CellListActivity)
                 setTextColor(fg)
                 background = GradientDrawable().apply {
                     setColor(bg)

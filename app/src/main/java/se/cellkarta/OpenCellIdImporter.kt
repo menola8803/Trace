@@ -29,7 +29,7 @@ object OpenCellIdImporter {
     /** Läser in en fil som du själv har laddat ner (240.csv.gz eller uppackad 240.csv). */
     suspend fun importFile(ctx: Context, uri: Uri, progress: suspend (String) -> Unit): Long =
         withContext(Dispatchers.IO) {
-            val raw = ctx.contentResolver.openInputStream(uri) ?: throw IOException("Kunde inte öppna filen")
+            val raw = ctx.contentResolver.openInputStream(uri) ?: throw IOException(ctx.getString(R.string.ocid_open_failed))
             raw.use { importStream(ctx, it, progress) }
         }
 
@@ -39,14 +39,14 @@ object OpenCellIdImporter {
     ): Long = withContext(Dispatchers.IO) {
         val file = File(ctx.cacheDir, "$mcc.csv.gz")
         try {
-            download(apiKey, mcc, file, progress)
+            download(ctx, apiKey, mcc, file, progress)
             file.inputStream().use { importStream(ctx, it, progress) }
         } finally {
             file.delete()
         }
     }
 
-    private suspend fun download(apiKey: String, mcc: String, target: File, progress: suspend (String) -> Unit) {
+    private suspend fun download(ctx: Context, apiKey: String, mcc: String, target: File, progress: suspend (String) -> Unit) {
         val token = URLEncoder.encode(apiKey, "UTF-8")
         // OpenCellID har haft två adresser för nedladdningar. Den andra prövas om den första inte svarar med data.
         val urls = listOf(
@@ -78,7 +78,7 @@ object OpenCellIdImporter {
                     continue
                 }
 
-                progress("Laddar ner celler för Sverige…")
+                progress(ctx.getString(R.string.ocid_downloading))
                 target.outputStream().use { out ->
                     val buf = ByteArray(1 shl 16)
                     var total = 0L
@@ -90,7 +90,7 @@ object OpenCellIdImporter {
                         total += n
                         if (total - reported >= 2_000_000) {
                             reported = total
-                            progress(String.format(SV, "Laddar ner… %.0f MB", total / 1_000_000.0))
+                            progress(ctx.tr(R.string.ocid_downloading_mb, total / 1_000_000.0))
                         }
                     }
                 }
@@ -99,19 +99,19 @@ object OpenCellIdImporter {
                 conn.disconnect()
             }
         }
-        throw IOException(explain(lastError))
+        throw IOException(explain(ctx, lastError))
     }
 
-    private fun explain(msg: String?): String {
+    private fun explain(ctx: Context, msg: String?): String {
         val m = msg.orEmpty()
         return when {
             m.contains("RATE", ignoreCase = true) || m.contains("limit", ignoreCase = true) ->
-                "OpenCellID tillåter bara ett fåtal nedladdningar per dag. Försök igen i morgon."
+                ctx.getString(R.string.ocid_rate_limit)
             m.contains("token", ignoreCase = true) || m.contains("key", ignoreCase = true) ||
                 m.contains("401") || m.contains("403") ->
-                "OpenCellID godkände inte nyckeln. Kontrollera den under Mer → OpenCellID-nyckel."
-            m.isBlank() -> "OpenCellID svarade inte. Kontrollera internetanslutningen."
-            else -> "OpenCellID svarade: $m"
+                ctx.getString(R.string.ocid_bad_key)
+            m.isBlank() -> ctx.getString(R.string.ocid_no_answer)
+            else -> ctx.tr(R.string.ocid_answer, m)
         }
     }
 
@@ -125,7 +125,7 @@ object OpenCellIdImporter {
         buffered.reset()
         val reader = (if (isGzip) GZIPInputStream(buffered, 1 shl 16) else buffered).bufferedReader()
 
-        progress("Läser in referensdata…")
+        progress(ctx.getString(R.string.ocid_reading))
         val stmt = db.compileStatement(
             "INSERT OR REPLACE INTO known_cells(cell_key, lat, lon, range_m) VALUES(?,?,?,?)"
         )
@@ -153,7 +153,7 @@ object OpenCellIdImporter {
                 if (count % BATCH == 0L) {
                     db.setTransactionSuccessful()
                     db.endTransaction()
-                    progress(String.format(SV, "Läser in referensdata… %,d celler", count))
+                    progress(ctx.tr(R.string.ocid_reading_n, count))
                     db.beginTransaction()
                 }
             }

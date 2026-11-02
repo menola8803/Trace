@@ -40,7 +40,7 @@
         android:layout_marginTop="12dp"
         android:layout_marginRight="12dp"
         android:background="@drawable/bg_round_button"
-        android:contentDescription="Inställningar"
+        android:contentDescription="@string/settings"
         android:src="@drawable/ic_settings" />
 
     <LinearLayout
@@ -61,7 +61,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:lineSpacingExtra="3dp"
-            android:text="Övervakningen är avstängd."
+            android:text="@string/status_off"
             android:textColor="@color/ink"
             android:textSize="13sp" />
 
@@ -77,7 +77,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Starta" />
+                android:text="@string/start" />
 
             <Button
                 android:id="@+id/btnCells"
@@ -85,7 +85,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="Celler" />
+                android:text="@string/cells" />
 
             <Button
                 android:id="@+id/btnMore"
@@ -93,7 +93,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="Mer" />
+                android:text="@string/more" />
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

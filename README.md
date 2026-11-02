@@ -156,3 +156,26 @@ Kartdata © OpenStreetMap-bidragsgivare. Celldata © OpenCellID, CC BY-SA 4.0.
 Trace delar tema med Direct, Alif och USB: mörk petroleumgrön bakgrund, guld och mint,
 Cinzel i ordmärket och Plus Jakarta Sans i texten. Ikonerna ritas med `python3 scripts/make-icons.py`.
 Typsnitten är licensierade under SIL Open Font License.
+
+## Loggar i Download/Trace
+
+Trace sparar en fil per dag i `Download/Trace`:
+
+- `trace-ÅÅÅÅ-MM-DD.csv`: alla mätningar
+- `trace-ÅÅÅÅ-MM-DD-handelser.csv`: alla avvikelser och nedgraderingar
+
+Appen berättar om mappen första gången den startas. Android tar inte bort filer i Download när en
+app avinstalleras, så använd **Inställningar → Ta bort Trace-mappen** innan du avinstallerar.
+I appen finns samma information under **Mer → Logg per dag**.
+
+## Markeringar på kartan
+
+- **Utropstecken med ring**: en onormal antenn. Ringens färg visar orsaken: röd rör sig,
+  rosa onormal styrka, grön kortvarig, guld ny.
+- **Frågetecken med ring**: var avvikelsen upptäcktes, alltså där du var.
+
+Tryck på en markering för en förklaringsruta med tid, styrka och detaljer. Tryck på rutan för att stänga den.
+
+## Språk
+
+Svenska eller engelska väljs under **Inställningar → Språk**.

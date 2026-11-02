@@ -49,30 +49,46 @@ data class CellEntry(
     val strong get() = CellDb.FLAG_STRONG in flags
     val shortLived get() = CellDb.FLAG_SHORT in flags
 
-    /** Avvikande antenn som ska visas som triangel på kartan. */
+    /** Onormal antenn som visas med utropstecken på kartan. */
     val anomalous get() = moving || strong || shortLived || isNew
 
-    /** Alla orsaker, i klartext. */
-    val reasons: List<String>
+    /** Avvikelsetyperna, viktigast först. */
+    val reasonTypes: List<String>
         get() = buildList {
-            if (moving) add("Rör sig")
-            if (strong) add("Onormal styrka")
-            if (shortLived) add("Kortvarig")
-            if (isNew) add("Ny, saknas i OpenCellID")
-            if (downgraded) add("Nedgradering")
+            if (moving) add(CellDb.FLAG_MOVING)
+            if (strong) add(CellDb.FLAG_STRONG)
+            if (shortLived) add(CellDb.FLAG_SHORT)
+            if (isNew) add(CellDb.FLAG_NEW)
+            if (downgraded) add(CellDb.FLAG_DOWNGRADE)
         }
 
-    val statusLabel: String
-        get() = when {
-            moving -> "Rör sig"
-            strong -> "Stark"
-            shortLived -> "Kortvarig"
-            isNew -> "Ny"
-            downgraded -> "Nedgradering"
-            known -> "Känd"
-            else -> "Ej i referens"
+    /** Kort status för listan, på valt språk. */
+    fun statusLabel(ctx: android.content.Context): String = ctx.getString(
+        when {
+            moving -> R.string.reason_moving
+            strong -> R.string.status_strong
+            shortLived -> R.string.reason_short
+            isNew -> R.string.status_new
+            downgraded -> R.string.reason_downgrade
+            known -> R.string.status_known
+            else -> R.string.status_unknown
         }
+    )
+
+    /** Alla orsaker i klartext, på valt språk. */
+    fun reasons(ctx: android.content.Context): List<String> = reasonTypes.map { Texts.reasonName(ctx, it) }
 }
+
+/** Sammanfattning av en dag i loggen. */
+data class DaySummary(
+    val day: String,          // ÅÅÅÅ-MM-DD, lokal tid
+    val measurements: Int,
+    val cells: Int,
+    val firstTs: Long,
+    val lastTs: Long,
+    val minDbm: Int?,
+    val maxDbm: Int?,
+)
 
 data class Cluster(val lat: Double, val lon: Double, val count: Int)
 
@@ -278,6 +294,57 @@ class CellDb private constructor(ctx: Context) :
             buildList {
                 while (c.moveToNext()) {
                     add(FlagRow(c.getString(0), c.getString(1), c.getLong(2), c.getDouble(3), c.getDouble(4), c.getString(5)))
+                }
+            }
+        }
+
+    /** Alla avvikelser och nedgraderingar, med platsen där de upptäcktes. */
+    fun allFlags(limit: Int): List<FlagRow> =
+        readableDatabase.rawQuery(
+            "SELECT cell_key, type, ts, lat, lon, detail FROM flags ORDER BY ts DESC LIMIT $limit", null
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(FlagRow(c.getString(0), c.getString(1), c.getLong(2), c.getDouble(3), c.getDouble(4), c.getString(5)))
+                }
+            }
+        }
+
+    fun flagsBetween(from: Long, to: Long): List<FlagRow> =
+        readableDatabase.rawQuery(
+            "SELECT cell_key, type, ts, lat, lon, detail FROM flags WHERE ts >= $from AND ts < $to ORDER BY ts", null
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(FlagRow(c.getString(0), c.getString(1), c.getLong(2), c.getDouble(3), c.getDouble(4), c.getString(5)))
+                }
+            }
+        }
+
+    fun flagsFor(key: String): List<FlagRow> =
+        readableDatabase.rawQuery(
+            "SELECT cell_key, type, ts, lat, lon, detail FROM flags WHERE cell_key=? ORDER BY ts", arrayOf(key)
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(FlagRow(c.getString(0), c.getString(1), c.getLong(2), c.getDouble(3), c.getDouble(4), c.getString(5)))
+                }
+            }
+        }
+
+    /** En rad per dag (lokal tid) med antal mätningar, celler, tider och signalspann. */
+    fun days(): List<DaySummary> =
+        readableDatabase.rawQuery(
+            "SELECT date(ts / 1000, 'unixepoch', 'localtime') AS d, COUNT(*), COUNT(DISTINCT cell_key), " +
+                "MIN(ts), MAX(ts), MIN(dbm), MAX(dbm) FROM obs GROUP BY d ORDER BY d DESC",
+            null
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(DaySummary(
+                        c.getString(0), c.getInt(1), c.getInt(2), c.getLong(3), c.getLong(4),
+                        if (c.isNull(5)) null else c.getInt(5), if (c.isNull(6)) null else c.getInt(6),
+                    ))
                 }
             }
         }

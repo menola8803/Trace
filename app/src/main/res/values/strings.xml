@@ -1,4 +1,226 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Trace</string>
+    <string name="app_name" translatable="false">Trace</string>
+
+    <!-- Gemensamt -->
+    <string name="ok">OK</string>
+    <string name="save">Spara</string>
+    <string name="cancel">Avbryt</string>
+    <string name="remove">Ta bort</string>
+    <string name="close">Stäng</string>
+    <string name="error_generic">Något gick fel.</string>
+    <string name="tap_to_close">Tryck för att stänga</string>
+    <string name="developer_line">Utvecklare: Claes Sundman S.N.C AB - 2026</string>
+    <string name="learning_only">Endast för lärande syfte</string>
+    <string name="learning_only_caps">ENDAST FÖR LÄRANDE SYFTE</string>
+    <string name="attribution">Kartdata © OpenStreetMap-bidragsgivare. Celldata © OpenCellID, CC BY-SA 4.0.</string>
+    <string name="tagline">— SER ANTENNERNA RUNT DIG —</string>
+
+    <!-- Huvudskärm -->
+    <string name="start">Starta</string>
+    <string name="stop">Stoppa</string>
+    <string name="cells">Celler</string>
+    <string name="more">Mer</string>
+    <string name="settings">Inställningar</string>
+    <string name="legend_own">Dina celler</string>
+    <string name="legend_known">Kända</string>
+    <string name="legend_antenna">Onormal antenn</string>
+    <string name="legend_event">Där det hände</string>
+    <string name="perm_needed">Appen behöver exakt plats för att kunna läsa cellinformation.</string>
+    <string name="status_off">Övervakningen är avstängd.</string>
+    <string name="status_connected">Ansluten: %1$s</string>
+    <string name="status_searching">Söker celler…</string>
+    <string name="status_counts">Dina celler: %1$,d · Kända: %2$,d · Onormala: %3$d · Händelser: %4$d</string>
+    <string name="hint_press_start">Tryck Starta. Cellerna du hör dyker upp som prickar där du är.</string>
+    <string name="hint_waiting">Väntar på första mätningen. Gå gärna ut, GPS:en behöver fri sikt.</string>
+    <string name="hint_download">Ladda ner Sverige under Mer för att se kända master och kunna upptäcka nya celler.</string>
+    <string name="known_cell">Känd cell %1$s</string>
+    <string name="own_cell_toast">%1$s\n%2$s · %3$d mätningar · senast %4$s</string>
+    <string name="connected_now">Ansluten nu</string>
+    <string name="n_measurements">%1$d mätningar</string>
+    <string name="track_title">Spår för cell som rör sig</string>
+    <string name="track_point">Uppskattad position från %1$d mätningar</string>
+
+    <!-- Meny Mer -->
+    <string name="menu_log">Logg per dag</string>
+    <string name="menu_download">Ladda ner Sverige från OpenCellID</string>
+    <string name="menu_key">OpenCellID-nyckel…</string>
+    <string name="menu_key_saved">OpenCellID-nyckel (sparad)</string>
+    <string name="menu_import">Importera fil…</string>
+    <string name="menu_export">Exportera mätlogg</string>
+
+    <!-- OpenCellID -->
+    <string name="key_title">OpenCellID-nyckel</string>
+    <string name="key_message">Skapa ett gratis konto på opencellid.org och klistra in din API-nyckel här. Den sparas bara i appen på den här telefonen.</string>
+    <string name="key_saved">Nyckeln är sparad.</string>
+    <string name="key_removed">Nyckeln är borttagen.</string>
+    <string name="preparing">Förbereder…</string>
+    <string name="downloaded_n">Laddade ner %1$,d celler.</string>
+    <string name="imported_n">Importerade %1$,d celler.</string>
+    <string name="log_saved">Loggen är sparad.</string>
+    <string name="export_failed">Exporten misslyckades: %1$s</string>
+    <string name="ocid_downloading">Laddar ner celler för Sverige…</string>
+    <string name="ocid_downloading_mb">Laddar ner… %1$.0f MB</string>
+    <string name="ocid_reading">Läser in referensdata…</string>
+    <string name="ocid_reading_n">Läser in referensdata… %1$,d celler</string>
+    <string name="ocid_open_failed">Kunde inte öppna filen.</string>
+    <string name="ocid_rate_limit">OpenCellID tillåter bara ett fåtal nedladdningar per dag. Försök igen i morgon.</string>
+    <string name="ocid_bad_key">OpenCellID godkände inte nyckeln. Kontrollera den under Mer → OpenCellID-nyckel.</string>
+    <string name="ocid_no_answer">OpenCellID svarade inte. Kontrollera internetanslutningen.</string>
+    <string name="ocid_answer">OpenCellID svarade: %1$s</string>
+
+    <!-- Övervakning och notiser -->
+    <string name="channel_monitor">Övervakning</string>
+    <string name="channel_alerts">Varningar</string>
+    <string name="ongoing_text">Loggar celler och letar efter avvikelser</string>
+    <string name="note_location_off">Platstjänster är avstängda. Slå på Plats i snabbinställningarna.</string>
+    <string name="note_gps_off">GPS är avstängd. Slå på Plats i snabbinställningarna.</string>
+    <string name="note_no_permission">Appen saknar behörighet till exakt plats.</string>
+    <string name="note_wait_position">Väntar på position. Gå gärna närmare ett fönster eller ut.</string>
+    <string name="note_wait_accuracy">Väntar på exaktare position (just nu ±%1$d m)…</string>
+
+    <!-- Orsaker och förklaringar -->
+    <string name="reason_moving">Rör sig</string>
+    <string name="reason_strong">Onormal styrka</string>
+    <string name="reason_short">Kortvarig</string>
+    <string name="reason_new">Ny, saknas i OpenCellID</string>
+    <string name="reason_downgrade">Nedgradering</string>
+    <string name="status_known">Känd</string>
+    <string name="status_unknown">Ej i referens</string>
+    <string name="status_new">Ny</string>
+    <string name="status_strong">Stark</string>
+
+    <string name="expl_moving">Samma cell-ID har hörts på platser som ligger för långt ifrån varandra för en vanlig mast.</string>
+    <string name="expl_strong">Signalen var ovanligt stark, eller mycket starkare än cellens vanliga nivå.</string>
+    <string name="expl_short">Telefonen anslöt till cellen, som bara fanns en kort stund och försvann medan du var kvar.</string>
+    <string name="expl_new">Cell-ID:t finns inte i OpenCellID:s databas.</string>
+    <string name="expl_downgrade">Telefonen gick från 4G eller 5G ner till ett äldre nät.</string>
+    <string name="expl_not_proof">Det här är en ledtråd, inget bevis.</string>
+
+    <string name="event_new">Ny cell upptäcktes här</string>
+    <string name="event_moving">Cellen hördes här, för långt från tidigare</string>
+    <string name="event_strong">Onormal styrka uppmättes här</string>
+    <string name="event_short">Kortvarig cell fanns här</string>
+    <string name="event_downgrade">Nedgradering skedde här</string>
+
+    <string name="det_dbm">%1$d dBm</string>
+    <string name="det_jump">%1$d dB starkare än vanligt (%2$d dBm)</string>
+    <string name="det_very_strong">ovanligt stark signal</string>
+    <string name="det_far">%1$d km isär inom 24 timmar</string>
+    <string name="det_from_ref">%1$d km från registrerad position</string>
+    <string name="det_minutes">fanns i cirka %1$d min</string>
+    <string name="det_from_to">%1$s → %2$s</string>
+
+    <string name="row_cell">Cell</string>
+    <string name="row_time">Tid</string>
+    <string name="row_strength">Styrka</string>
+    <string name="row_detail">Detaljer</string>
+    <string name="row_first">Först sedd</string>
+    <string name="row_last">Senast sedd</string>
+    <string name="row_count">Mätningar</string>
+    <string name="row_best">Starkaste signal</string>
+    <string name="row_position">Plats</string>
+    <string name="unknown_value">okänd</string>
+
+    <string name="alert_new">Ny okänd cell</string>
+    <string name="alert_moving">Cell som verkar flytta sig</string>
+    <string name="alert_strong">Onormal signalstyrka</string>
+    <string name="alert_short">Kortvarig cell</string>
+    <string name="alert_downgrade">Nedgradering till %1$s</string>
+
+    <!-- Lagring i Download/Trace -->
+    <string name="storage_title">Trace sparar loggar</string>
+    <string name="storage_message">Trace skapar mappen Download/Trace på telefonen. Där sparas en fil per dag med alla mätningar och en med alla händelser.\n\nAndroid tar inte bort mappen automatiskt när du avinstallerar appen. Använd Inställningar → Ta bort Trace-mappen innan du avinstallerar.</string>
+    <string name="storage_info_file">Trace sparar en fil per dag i den här mappen:\n\ntrace-ÅÅÅÅ-MM-DD.csv: alla mätningar\ntrace-ÅÅÅÅ-MM-DD-handelser.csv: alla avvikelser och nedgraderingar\n\nMappen tas inte bort automatiskt när appen avinstalleras. Använd Inställningar → Ta bort Trace-mappen i appen, eller radera mappen själv.\n\nUtvecklare: Claes Sundman S.N.C AB. Endast för lärande syfte.\n</string>
+    <string name="storage_section">LAGRING</string>
+    <string name="storage_path">Download/Trace</string>
+    <string name="storage_desc">En fil per dag med mätningar och en med händelser. Android tar inte bort mappen när appen avinstalleras.</string>
+    <string name="storage_delete">Ta bort Trace-mappen</string>
+    <string name="storage_delete_confirm">Alla filer som Trace har sparat i Download/Trace tas bort. Mätningarna i appen finns kvar.</string>
+    <string name="storage_deleted">%1$d filer togs bort.</string>
+    <string name="storage_delete_failed">Kunde inte ta bort filerna: %1$s</string>
+
+    <!-- Logg per dag -->
+    <string name="log_title">Logg per dag</string>
+    <string name="log_empty">Inget loggat än. Starta övervakningen på kartan, så samlas mätningarna här dag för dag.</string>
+    <string name="log_day_summary">%1$,d mätningar · %2$d celler · %3$s–%4$s</string>
+    <string name="log_day_signal">Signal %1$d till %2$d dBm</string>
+    <string name="log_day_events">%1$d händelser</string>
+    <string name="log_day_no_events">Inga händelser</string>
+    <string name="log_day_files">Filer: Download/Trace/trace-%1$s.csv</string>
+    <string name="log_show_on_map">Visa på kartan</string>
+
+    <!-- Celler -->
+    <string name="cells_title">Sparade celler</string>
+    <string name="cells_search_hint">Sök cell-ID, till exempel 240:7:</string>
+    <string name="cells_show">Visa: %1$s</string>
+    <string name="cells_save_list">Spara listan</string>
+    <string name="cells_summary">%1$,d sparade celler · %2$,d onormala · visar %3$,d</string>
+    <string name="cells_empty">Inga celler sparade än. Starta övervakningen på kartan, så sparas varje cell-ID som telefonen hör.</string>
+    <string name="cells_no_match">Inga celler matchar sökningen.</string>
+    <string name="cells_meta">%1$d mätningar · starkast %2$s dBm · senast %3$s</string>
+    <string name="cells_copy_id">Kopiera ID</string>
+    <string name="cells_copied">Cell-ID kopierat</string>
+    <string name="cells_saved_n">Listan är sparad (%1$d celler).</string>
+    <string name="cells_not_in_ref">Cellen finns inte i den importerade OpenCellID-datan.</string>
+    <string name="filter_all">Alla</string>
+    <string name="filter_abnormal">Onormala</string>
+    <string name="filter_moving">Rör sig</string>
+    <string name="filter_strong">Stark</string>
+    <string name="filter_short">Kortvarig</string>
+    <string name="filter_new">Nya</string>
+    <string name="filter_unknown">Ej i referens</string>
+    <string name="row_status">Status</string>
+    <string name="row_network">Nät</string>
+    <string name="row_operator">Land och operatör</string>
+    <string name="row_area">Område (LAC/TAC)</string>
+    <string name="row_cell_id">Cell-ID</string>
+
+    <!-- Inställningar -->
+    <string name="language_section">SPRÅK</string>
+    <string name="language_sv">Svenska</string>
+    <string name="language_en">English</string>
+    <string name="updates_section">UPDATES</string>
+    <string name="version">Version</string>
+    <string name="version_value">%1$s (build %2$d)</string>
+    <string name="update_check">Sök efter uppdatering</string>
+    <string name="update_download">Ladda ner %1$s</string>
+    <string name="update_auto">Sök automatiskt en gång per dygn</string>
+    <string name="update_never">Har inte sökt efter uppdateringar än.</string>
+    <string name="update_last">Senast kontrollerad %1$s.</string>
+    <string name="update_searching">Söker efter uppdatering…</string>
+    <string name="update_available">Version %1$s finns att hämta.</string>
+    <string name="update_latest">Du har den senaste versionen.</string>
+    <string name="update_no_net">Kunde inte nå GitHub. Kontrollera internetanslutningen.</string>
+    <string name="update_none_published">Ingen version är publicerad än.</string>
+    <string name="update_http">GitHub svarade med kod %1$d. Försök igen senare.</string>
+    <string name="update_bad_version">Kunde inte läsa versionsnumret från GitHub.</string>
+    <string name="update_dialog_title">Ny version finns</string>
+    <string name="update_dialog_message">Version %1$s finns att hämta. Du har %2$s.\n\nFilen laddas ner i webbläsaren. Öppna den när den är klar och tryck Installera. Dina sparade celler och inställningar finns kvar.</string>
+    <string name="update_later">Senare</string>
+    <string name="update_no_browser">Ingen webbläsare hittades. Gå till %1$s</string>
+    <string name="changes_title">Senaste ändringar på GitHub</string>
+    <string name="changes_loading">Hämtar ändringar…</string>
+    <string name="changes_failed">Kunde inte hämta ändringarna just nu.</string>
+    <string name="developer_section">DEVELOPER</string>
+    <string name="about_trace">Om Trace</string>
+    <string name="source_code">Källkod</string>
+    <string name="all_versions">Alla versioner</string>
+    <string name="show_on_github">Visa på GitHub</string>
+
+    <!-- Om Trace -->
+    <string name="about_headline_1">Se mobilnätet runt dig.</string>
+    <string name="about_headline_2">Upptäck det som avviker.</string>
+    <string name="about_map_title">Karta</string>
+    <string name="about_map_body">Varje cell telefonen hör sparas med tid, plats och signalstyrka och ritas på OpenStreetMap, tillsammans med kända master från OpenCellID.</string>
+    <string name="about_antennas_title">Antenner</string>
+    <string name="about_antennas_body">Se vilken cell du är ansluten till, hur stark signalen är och vilka celler du har hört tidigare.</string>
+    <string name="about_abnormal_title">Avvikelser</string>
+    <string name="about_abnormal_body">Antenner som rör sig, har onormal styrka, är kortvariga eller saknas i OpenCellID får ett utropstecken. Ett frågetecken visar var det hände.</string>
+    <string name="about_version">Version %1$s (build %2$d)</string>
+
+    <!-- Startskärm -->
+    <string name="splash_map">KARTA</string>
+    <string name="splash_antennas">ANTENNER</string>
+    <string name="splash_abnormal">AVVIKELSER</string>
 </resources>

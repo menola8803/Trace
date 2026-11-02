@@ -37,9 +37,9 @@ object UpdateChecker {
     }
 
     fun currentVersionName(ctx: Context): String =
-        ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "okänd"
+        ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: ctx.getString(R.string.unknown_value)
 
-    suspend fun latest(): Release = withContext(Dispatchers.IO) {
+    suspend fun latest(ctx: Context): Release = withContext(Dispatchers.IO) {
         val conn = (URL(API).openConnection() as HttpURLConnection).apply {
             connectTimeout = 15_000
             readTimeout = 15_000
@@ -49,13 +49,13 @@ object UpdateChecker {
         try {
             when (val code = conn.responseCode) {
                 HttpURLConnection.HTTP_OK -> Unit
-                HttpURLConnection.HTTP_NOT_FOUND -> throw IOException("Ingen version är publicerad än.")
-                else -> throw IOException("GitHub svarade med kod $code. Försök igen senare.")
+                HttpURLConnection.HTTP_NOT_FOUND -> throw IOException(ctx.getString(R.string.update_none_published))
+                else -> throw IOException(ctx.tr(R.string.update_http, code))
             }
             val json = JSONObject(conn.inputStream.bufferedReader().readText())
             val body = json.optString("body")
             val build = Regex("""Build:\s*(\d+)""").find(body)?.groupValues?.get(1)?.toLong()
-                ?: throw IOException("Kunde inte läsa versionsnumret från GitHub.")
+                ?: throw IOException(ctx.getString(R.string.update_bad_version))
             val name = Regex("""Version:\s*([\w.\-]+)""").find(body)?.groupValues?.get(1) ?: "build $build"
 
             val assets = json.optJSONArray("assets")
@@ -76,17 +76,39 @@ object UpdateChecker {
         }
     }
 
+    data class Change(val date: String, val title: String)
+
+    /** De senaste ändringarna i repot, en rad per commit (första raden i meddelandet). */
+    suspend fun recentChanges(ctx: Context, count: Int = 8): List<Change> = withContext(Dispatchers.IO) {
+        val conn = (URL("https://api.github.com/repos/menola8803/Trace/commits?per_page=$count").openConnection() as HttpURLConnection).apply {
+            connectTimeout = 15_000
+            readTimeout = 15_000
+            setRequestProperty("Accept", "application/vnd.github+json")
+            setRequestProperty("User-Agent", "Trace")
+        }
+        try {
+            if (conn.responseCode != HttpURLConnection.HTTP_OK) throw IOException(ctx.tr(R.string.update_http, conn.responseCode))
+            val arr = org.json.JSONArray(conn.inputStream.bufferedReader().readText())
+            val fmt = java.time.format.DateTimeFormatter.ofPattern("d MMM", Lang.locale(ctx)).withZone(java.time.ZoneId.systemDefault())
+            (0 until arr.length()).map { i ->
+                val commit = arr.getJSONObject(i).getJSONObject("commit")
+                val date = runCatching {
+                    fmt.format(java.time.Instant.parse(commit.getJSONObject("author").getString("date")))
+                }.getOrDefault("")
+                Change(date, commit.optString("message").lineSequence().firstOrNull().orEmpty().trim())
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     /** Frågar om användaren vill hämta den nya versionen. Nedladdningen sker i webbläsaren. */
     fun offer(ctx: Context, release: Release) {
         AlertDialog.Builder(ctx)
-            .setTitle("Ny version finns")
-            .setMessage(
-                "Version ${release.versionName} finns att hämta. Du har ${currentVersionName(ctx)}.\n\n" +
-                    "Filen laddas ner i webbläsaren. Öppna den när den är klar och tryck Installera. " +
-                    "Dina sparade celler och inställningar finns kvar."
-            )
-            .setPositiveButton("Ladda ner") { _, _ -> open(ctx, release.apkUrl) }
-            .setNegativeButton("Senare", null)
+            .setTitle(R.string.update_dialog_title)
+            .setMessage(ctx.tr(R.string.update_dialog_message, release.versionName, currentVersionName(ctx)))
+            .setPositiveButton(ctx.tr(R.string.update_download, release.versionName)) { _, _ -> open(ctx, release.apkUrl) }
+            .setNegativeButton(R.string.update_later, null)
             .show()
     }
 
@@ -94,7 +116,7 @@ object UpdateChecker {
         try {
             ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (e: ActivityNotFoundException) {
-            Toast.makeText(ctx, "Ingen webbläsare hittades. Gå till $url", Toast.LENGTH_LONG).show()
+            Toast.makeText(ctx, ctx.tr(R.string.update_no_browser, url), Toast.LENGTH_LONG).show()
         }
     }
 }

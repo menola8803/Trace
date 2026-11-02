@@ -3,7 +3,6 @@ package se.cellkarta
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
-import androidx.activity.ComponentActivity
 import androidx.core.content.ContextCompat
 import androidx.core.text.buildSpannedString
 import androidx.core.text.color
@@ -12,7 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 
 /** Om Trace: samma upplägg som Om-sidan i Direct och Alif. */
-class AboutActivity : ComponentActivity() {
+class AboutActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,15 +26,18 @@ class AboutActivity : ComponentActivity() {
             insets
         }
 
-        findViewById<View>(R.id.btnBack).setOnClickListener { finish() }
+        findViewById<TextView>(R.id.btnBack).apply {
+            text = "‹  ${getString(R.string.about_trace)}"
+            setOnClickListener { finish() }
+        }
 
         findViewById<TextView>(R.id.headline).text = buildSpannedString {
-            append("Se mobilnätet runt dig. ")
-            color(ContextCompat.getColor(this@AboutActivity, R.color.mint)) { append("Upptäck det som avviker.") }
+            append(getString(R.string.about_headline_1) + " ")
+            color(ContextCompat.getColor(this@AboutActivity, R.color.mint)) { append(getString(R.string.about_headline_2)) }
         }
 
         findViewById<TextView>(R.id.aboutVersion).text =
-            "Version ${UpdateChecker.currentVersionName(this)} (build ${UpdateChecker.currentBuild(this)})"
+            tr(R.string.about_version, UpdateChecker.currentVersionName(this), UpdateChecker.currentBuild(this))
 
         findViewById<View>(R.id.aboutSource).setOnClickListener { UpdateChecker.open(this, UpdateChecker.REPO_URL) }
     }
