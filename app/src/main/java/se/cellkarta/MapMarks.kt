@@ -30,13 +30,20 @@ object MapMarks {
         else -> COLOR_NEW
     }
 
-    private val cache = HashMap<String, BitmapDrawable>()
+    /**
+     * Bilderna sparas en gång, men varje knapp och markering får ett eget Drawable.
+     * Kartan ändrar ett Drawables gränser när den ritar markeringen, så ett delat
+     * Drawable försvinner ur knappar och teckenförklaringen.
+     */
+    private val cache = HashMap<String, Bitmap>()
+
+    private fun drawable(ctx: Context, bmp: Bitmap) = BitmapDrawable(ctx.resources, bmp)
 
     /**
      * Rund markering med ett tecken i mitten: mörk fyllning, färgad ring och ett svagt sken runt om,
      * i samma stil som ringen i Trace-ikonen.
      */
-    fun icon(ctx: Context, symbol: String, color: Int, sizeDp: Float = 30f): BitmapDrawable =
+    fun icon(ctx: Context, symbol: String, color: Int, sizeDp: Float = 30f): BitmapDrawable = drawable(ctx,
         cache.getOrPut("$symbol-$color-$sizeDp") {
             val d = ctx.resources.displayMetrics.density
             val size = (sizeDp * d).toInt()
@@ -60,11 +67,11 @@ object MapMarks {
             p.typeface = ResourcesCompat.getFont(ctx, R.font.jakarta_bold)
             p.color = color
             c.drawText(symbol, r, r - (p.descent() + p.ascent()) / 2f, p)
-            BitmapDrawable(ctx.resources, bmp)
-        }
+            bmp
+        })
 
     /** Egen mastmarkering: guldring med en sändande mast, i samma stil som Trace-ikonen. */
-    fun mastIcon(ctx: Context, sizeDp: Float = 38f): BitmapDrawable = cache.getOrPut("mast-$sizeDp") {
+    fun mastIcon(ctx: Context, sizeDp: Float = 38f): BitmapDrawable = drawable(ctx, cache.getOrPut("mast-$sizeDp") {
         val d = ctx.resources.displayMetrics.density
         val size = (sizeDp * d).toInt()
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -98,8 +105,8 @@ object MapMarks {
         }
         p.style = Paint.Style.FILL
         c.drawCircle(r, r - 7 * u, 1.8f * u, p)
-        BitmapDrawable(ctx.resources, bmp)
-    }
+        bmp
+    })
 
     /**
      * Förklaringsruta med tunn kant. Den ligger kvar, även när kartan ritas om,
