@@ -178,4 +178,4 @@ Tryck på en markering för en förklaringsruta med tid, styrka och detaljer. Tr
 
 ## Språk
 
-Svenska eller engelska väljs under **Inställningar → Språk**.
+Engelska är förvalt. Svenska väljs under **Inställningar → Språk**, och då byter hela appen, även startskärmen.

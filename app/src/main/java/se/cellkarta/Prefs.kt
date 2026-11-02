@@ -1,7 +1,6 @@
 package se.cellkarta
 
 import android.content.Context
-import java.util.Locale
 import androidx.core.content.edit
 
 /**
@@ -33,10 +32,8 @@ object Prefs {
 
     fun setLastUpdateCheck(ctx: Context, ts: Long) = sp(ctx).edit { putLong(KEY_LAST_UPDATE_CHECK, ts) }
 
-    /** Svenska om telefonen är på svenska, annars engelska, tills användaren väljer själv. */
-    fun language(ctx: Context): String =
-        sp(ctx).getString(KEY_LANGUAGE, null)
-            ?: if (Locale.getDefault().language == "sv") Lang.SV else Lang.EN
+    /** Engelska är alltid förvalt. Svenska väljs under Inställningar → Språk. */
+    fun language(ctx: Context): String = sp(ctx).getString(KEY_LANGUAGE, null) ?: Lang.EN
 
     fun setLanguage(ctx: Context, tag: String) = sp(ctx).edit { putString(KEY_LANGUAGE, tag) }
 
