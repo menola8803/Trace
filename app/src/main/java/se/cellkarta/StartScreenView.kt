@@ -76,6 +76,7 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
     private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
     private val path = Path()
     private val rect = RectF()
+    private val bounds = android.graphics.Rect()
     private val dash = DashPathEffect(floatArrayOf(5f, 4.2f), 0f)
 
     init {
@@ -159,42 +160,74 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
         if (!reduce && !finishing) postInvalidateOnAnimation()
     }
 
+    private val glowBottom = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    /** Grön glöd bakom loggan och en varm guldglöd längst ner, som i Direct och Alif. */
     private fun drawGlow(c: Canvas) {
         glow.shader = RadialGradient(
-            CX, CY, 320f,
-            intArrayOf(Color.argb(210, Color.red(TEAL), Color.green(TEAL), Color.blue(TEAL)), Color.argb(0, 11, 20, 22)),
+            CX, 278f, 330f,
+            intArrayOf(TEAL, Color.argb(0, Color.red(TEAL), Color.green(TEAL), Color.blue(TEAL))),
             floatArrayOf(0f, 1f), Shader.TileMode.CLAMP
         )
         c.drawRect(-W0, -H0, W0 * 2, H0 * 2, glow)
+        glowBottom.shader = RadialGradient(
+            CX, H0 + 17f, 260f,
+            intArrayOf(Color.argb(33, 232, 176, 74), Color.argb(0, 232, 176, 74)),
+            floatArrayOf(0f, 1f), Shader.TileMode.CLAMP
+        )
+        c.drawRect(-W0, -H0, W0 * 2, H0 * 2, glowBottom)
     }
 
-    /** Svag karta i bakgrunden: några gator och celler som blinkar till. */
-    private fun drawPattern(c: Canvas, t: Float) {
-        val fade = ent(t, 100f, 900f)
-        stroke.strokeWidth = 1f
-        stroke.tint(MINT, 0.10f * fade)
-        path.reset()
-        path.moveTo(0f, 150f); path.lineTo(120f, 172f); path.lineTo(390f, 128f)
-        path.moveTo(0f, 700f); path.lineTo(170f, 688f); path.lineTo(390f, 712f)
-        path.moveTo(40f, 0f); path.lineTo(64f, 844f)
-        path.moveTo(352f, 0f); path.lineTo(330f, 844f)
-        c.drawPath(path, stroke)
+    // Bakgrund: ett svagt nät av celler där signaler färdas mellan masterna.
+    private val nodes = arrayOf(
+        floatArrayOf(34f, 92f, 600f), floatArrayOf(118f, 58f, 0f), floatArrayOf(206f, 112f, 1200f),
+        floatArrayOf(300f, 66f, 300f), floatArrayOf(360f, 148f, 1800f), floatArrayOf(72f, 180f, 900f),
+        floatArrayOf(28f, 732f, 1500f), floatArrayOf(98f, 806f, 400f), floatArrayOf(192f, 760f, 2100f),
+        floatArrayOf(286f, 818f, 1000f), floatArrayOf(364f, 742f, 1700f),
+    )
+    private val edges = arrayOf(
+        intArrayOf(0, 1), intArrayOf(1, 2), intArrayOf(2, 3), intArrayOf(3, 4), intArrayOf(0, 5), intArrayOf(5, 2),
+        intArrayOf(6, 7), intArrayOf(7, 8), intArrayOf(8, 9), intArrayOf(9, 10), intArrayOf(6, 8), intArrayOf(8, 10),
+    )
+    // Signaler: från nod, till nod, period, fördröjning
+    private val signals = arrayOf(
+        floatArrayOf(5f, 2f, 3400f, 0f), floatArrayOf(10f, 8f, 4200f, 1100f), floatArrayOf(6f, 8f, 3800f, 2000f),
+        floatArrayOf(1f, 3f, 4600f, 700f),
+    )
 
-        val cells = arrayOf(
-            floatArrayOf(22f, 214f, 600f), floatArrayOf(372f, 196f, 1500f), floatArrayOf(24f, 420f, 300f),
-            floatArrayOf(366f, 440f, 1100f), floatArrayOf(28f, 612f, 1200f), floatArrayOf(364f, 620f, 300f),
-        )
-        stroke.strokeWidth = 1.2f
-        cells.forEachIndexed { i, (x, y, d) ->
-            val a = fade * lerp(0.2f, 0.75f, ping(t, 3600f, d))
-            stroke.tint(MINT, a)
-            if (i % 3 == 1) {
-                path.reset()
-                path.moveTo(x, y - 6f); path.lineTo(x + 6f, y + 4.5f); path.lineTo(x - 6f, y + 4.5f); path.close()
-                c.drawPath(path, stroke)
+    private fun drawPattern(c: Canvas, t: Float) {
+        val fade = ent(t, 100f, 800f)
+        stroke.strokeWidth = 1f
+        stroke.tint(MINT, 0.16f * fade)
+        for ((i, j) in edges) c.drawLine(nodes[i][0], nodes[i][1], nodes[j][0], nodes[j][1], stroke)
+
+        nodes.forEachIndexed { i, (x, y, d) ->
+            val a = fade * lerp(0.25f, 0.85f, ping(t, 3200f, d))
+            if (i == 2 || i == 8) {
+                // Två av noderna är master: en liten ring som sänder
+                stroke.strokeWidth = 1.2f
+                stroke.tint(MINT, a)
+                c.drawCircle(x, y, 4.5f, stroke)
+                fill.tint(MINT, a)
+                c.drawCircle(x, y, 1.6f, fill)
             } else {
-                c.drawCircle(x, y, 5f, stroke)
+                fill.tint(MINT, a)
+                c.drawCircle(x, y, 2.3f, fill)
             }
+        }
+
+        if (reduce) return
+        for ((from, to, period, delay) in signals) {
+            val v = loop(t, period, delay)
+            val a = when {
+                v < 0.08f -> v / 0.08f
+                v > 0.92f -> (1f - v) / 0.08f
+                else -> 1f
+            }
+            val p = nodes[from.toInt()]
+            val q = nodes[to.toInt()]
+            fill.tint(GOLD, a * fade)
+            c.drawCircle(lerp(p[0], q[0], v), lerp(p[1], q[1], v), 3f, fill)
         }
     }
 
@@ -218,50 +251,40 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
         val sc = lerp(0.82f, 1f, pop)
         c.scale(sc, sc, CX, CY)
 
-        // Streckad inre cirkel som långsamt roterar, som en radar
-        c.save()
-        c.rotate(loop(t, 40_000f) * 360f, CX, CY)
-        stroke.strokeWidth = 1.2f
-        stroke.pathEffect = dash
-        stroke.tint(GOLD_DIM, inner * pop)
-        c.drawCircle(CX, CY, 42f, stroke)
-        stroke.pathEffect = null
-        c.restore()
-
         // Guldringen ritar upp sig själv
         stroke.strokeWidth = 3.5f
         stroke.tint(GOLD, pop)
         rect.set(CX - 56f, CY - 56f, CX + 56f, CY + 56f)
         c.drawArc(rect, -90f, 360f * draw, false, stroke)
 
-        // T i Cinzel, med ett mjukt guldsken
+        // Stort T i Cinzel med ett mjukt guldsken, som i ikonen
         val dy = lerp(8f, 0f, inner)
         text.typeface = cinzel
-        text.textSize = 60f
+        text.textSize = 84f
         text.letterSpacing = 0f
+        text.getTextBounds("T", 0, 1, bounds)
+        val baseline = CY + 7.5f + dy - bounds.exactCenterY()
         text.tint(GOLD, inner)
         text.setShadowLayer(14f, 0f, 0f, Color.argb((90 * inner).toInt(), 232, 176, 74))
-        c.drawText("T", CX, CY + 30f + dy, text)
+        c.drawText("T", CX, baseline, text)
         text.clearShadowLayer()
 
-        // Mastens topp sänder
-        val tipY = CY - 28f + dy
-        fill.tint(GOLD_PALE, inner)
-        c.drawCircle(CX, tipY, 3.2f, fill)
-        stroke.strokeWidth = 2.2f
-        for ((r, d) in listOf(9f to 0f, 16f to 350f)) {
-            val a = inner * lerp(0.25f, 1f, ping(t, 1600f, d))
-            stroke.tint(if (r < 12f) GOLD_PALE else GOLD, a)
-            rect.set(CX - r, tipY - r, CX + r, tipY + r)
-            c.drawArc(rect, 145f, 70f, false, stroke)
-            c.drawArc(rect, -35f, 70f, false, stroke)
+        // Signalvågor på båda sidor om stammen: masten sänder
+        val my = CY + 9.7f + dy
+        stroke.strokeWidth = 2.6f
+        for ((r, d) in listOf(16f to 0f, 24f to 350f)) {
+            val a = inner * lerp(0.3f, 1f, ping(t, 1600f, d))
+            stroke.tint(if (r < 20f) GOLD_PALE else GOLD_DIM, a)
+            rect.set(CX - r, my - r, CX + r, my + r)
+            c.drawArc(rect, 148f, 64f, false, stroke)
+            c.drawArc(rect, -32f, 64f, false, stroke)
         }
 
-        // Två punkter som kretsar på ringen: en mint-triangel och en ljusguld punkt
-        c.save()
-        c.rotate(loop(t, 9000f) * 360f - 45f, CX, CY)
-        val ax = CX
-        val ay = CY - 56f
+        // Två punkter som kretsar på ringen: en mint-triangel och en ljusguld punkt.
+        // Triangeln står alltid upprätt medan den kretsar.
+        val ang = Math.toRadians((loop(t, 9000f) * 360f - 45f).toDouble())
+        val ax = CX + 56f * kotlin.math.sin(ang).toFloat()
+        val ay = CY - 56f * kotlin.math.cos(ang).toFloat()
         fill.tint(MINT, 0.18f * inner)
         c.drawCircle(ax, ay, 12f, fill)
         fill.tint(BG, inner)
@@ -273,14 +296,14 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
         path.moveTo(ax, ay - 6f); path.lineTo(ax + 5.6f, ay + 4.2f); path.lineTo(ax - 5.6f, ay + 4.2f); path.close()
         c.drawPath(path, fill)
 
-        val by = CY + 56f
+        val bx = 2 * CX - ax
+        val by = 2 * CY - ay
         fill.tint(GOLD_PALE, 0.18f * inner)
-        c.drawCircle(ax, by, 12f, fill)
+        c.drawCircle(bx, by, 12f, fill)
         fill.tint(BG, inner)
-        c.drawCircle(ax, by, 7.5f, fill)
+        c.drawCircle(bx, by, 7.5f, fill)
         fill.tint(GOLD_PALE, inner)
-        c.drawCircle(ax, by, 5f, fill)
-        c.restore()
+        c.drawCircle(bx, by, 5f, fill)
 
         c.restore()
     }
@@ -421,17 +444,39 @@ class StartScreenView(context: Context, private val onDone: (StartScreenView) ->
         c.drawCircle(x, y + 7f + lift, 1.6f, fill)
     }
 
+    /** Etikett under funktionerna, som "End-to-end encrypted" i Direct, och utvecklaren längst ner. */
     private fun drawFooter(c: Canvas, t: Float) {
-        val v = ent(t, 1400f, 800f)
-        text.typeface = sansMedium
-        text.textSize = 11f
-        text.letterSpacing = 0.02f
-        text.tint(DIM, v)
-        c.drawText(developer, CX, 752f, text)
+        val v = ent(t, 1500f, 800f)
+
         text.typeface = sansBold
+        text.textSize = 10f
+        text.letterSpacing = 0.22f
+        val w = text.measureText(learning)
+        val iconW = 14f
+        val left = CX - (w + iconW + 8f) / 2f
+
+        // Liten uppslagen bok
+        stroke.strokeWidth = 1.5f
+        stroke.tint(DIM, v)
+        path.reset()
+        val bx = left
+        val by = 668f
+        path.moveTo(bx + 7f, by - 4f)
+        path.quadTo(bx + 3.5f, by - 6f, bx, by - 5f); path.lineTo(bx, by + 5f)
+        path.quadTo(bx + 3.5f, by + 4f, bx + 7f, by + 6f)
+        path.quadTo(bx + 10.5f, by + 4f, bx + 14f, by + 5f); path.lineTo(bx + 14f, by - 5f)
+        path.quadTo(bx + 10.5f, by - 6f, bx + 7f, by - 4f); path.lineTo(bx + 7f, by + 6f)
+        c.drawPath(path, stroke)
+
+        text.textAlign = Paint.Align.LEFT
+        text.tint(DIM, v)
+        c.drawText(learning, left + iconW + 8f, by + 3.6f, text)
+        text.textAlign = Paint.Align.CENTER
+
+        text.typeface = sansMedium
         text.textSize = 10.5f
-        text.letterSpacing = 0.12f
-        text.tint(MINT, v)
-        c.drawText(learning, CX + 0.6f, 772f, text)
+        text.letterSpacing = 0.04f
+        text.tint(DIM, v * 0.85f)
+        c.drawText(developer, CX, 696f, text)
     }
 }

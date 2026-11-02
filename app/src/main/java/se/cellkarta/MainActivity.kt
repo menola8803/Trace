@@ -260,7 +260,6 @@ class MainActivity : BaseActivity() {
         val gearTop = (gear.layoutParams as MarginLayoutParams).topMargin
         val gearEnd = (gear.layoutParams as MarginLayoutParams).rightMargin
         val scrim = findViewById<View>(R.id.topScrim)
-        val scrimHeight = scrim.layoutParams.height
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.root)) { _, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
@@ -273,7 +272,10 @@ class MainActivity : BaseActivity() {
                 topMargin = gearTop + bars.top
                 rightMargin = gearEnd + bars.right
             }
-            scrim.updateLayoutParams { height = scrimHeight + bars.top }
+            // Kartan börjar under statusraden. Där ovanför syns appens mörka bakgrund,
+            // och en tonad övergång leder ner i kartan.
+            map.updateLayoutParams<MarginLayoutParams> { topMargin = bars.top }
+            scrim.updateLayoutParams<MarginLayoutParams> { topMargin = bars.top }
             insets
         }
     }

@@ -1,6 +1,6 @@
 # Ritar Trace-ikonerna i samma stil som Direct, Alif och USB (kräver Pillow och numpy).
 #   python3 scripts/make-icons.py
-# Mörk petroleumgrön bakgrund, guldring med sken, ett T i Cinzel som en mast med signalvågor,
+# Mörk petroleumgrön bakgrund, guldring med sken, ett stort T i Cinzel med signalvågor kring stammen,
 # en mint-triangel och en ljusguld punkt på ringen.
 import math, os
 import numpy as np
@@ -45,19 +45,16 @@ def mark(size, k, mono=False):
     gd = (255, 255, 255, 140) if mono else GOLD_DIM + (255,)
     gp = (255, 255, 255, 220) if mono else GOLD_PALE + (255,)
 
-    # Ring och en streckad inre cirkel, som en radar
+    # Ring och ett stort T i Cinzel, som D:et i Direct
     d.ellipse([c - R, c - R, c + R, c + R], outline=g, width=int(34 * u))
-    dashed_circle(d, c, c, R * 0.74, gd, int(9 * u))
+    font = ImageFont.truetype(CINZEL, int(500 * u))
+    d.text((c, c + 40 * u), 'T', font=font, fill=g, anchor='mm')
 
-    # T i Cinzel, som en mast, med en sändande punkt i toppen
-    font = ImageFont.truetype(CINZEL, int(400 * u))
-    d.text((c, c + 62 * u), 'T', font=font, fill=g, anchor='mm')
-    tip = (c, c - 128 * u)
-    tr = 17 * u
-    d.ellipse([tip[0] - tr, tip[1] - tr, tip[0] + tr, tip[1] + tr], fill=gp)
-    for r, col in ((48 * u, gp), (84 * u, gd)):
-        arc(d, tip, r, 145, 215, col, int(14 * u))
-        arc(d, tip, r, -35, 35, col, int(14 * u))
+    # Signalvågor på båda sidor om stammen: T:et blir en sändande mast
+    mid = (c, c + 52 * u)
+    for r, col in ((86 * u, gp), (128 * u, gd)):
+        arc(d, mid, r, 148, 212, col, int(14 * u))
+        arc(d, mid, r, -32, 32, col, int(14 * u))
 
     # Accenter på ringen: mint-triangel uppe till vänster, ljusguld punkt nere till höger
     o = R * math.cos(math.pi / 4)
