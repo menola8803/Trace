@@ -39,6 +39,5 @@ class AboutActivity : BaseActivity() {
         findViewById<TextView>(R.id.aboutVersion).text =
             tr(R.string.about_version, UpdateChecker.currentVersionName(this), UpdateChecker.currentBuild(this))
 
-        findViewById<View>(R.id.aboutSource).setOnClickListener { UpdateChecker.open(this, UpdateChecker.REPO_URL) }
     }
 }

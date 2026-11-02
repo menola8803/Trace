@@ -86,7 +86,6 @@ class SettingsActivity : BaseActivity() {
         findViewById<View>(R.id.rowAbout).setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
-        findViewById<View>(R.id.rowSource).setOnClickListener { UpdateChecker.open(this, UpdateChecker.REPO_URL) }
         findViewById<View>(R.id.rowAllVersions).setOnClickListener {
             UpdateChecker.open(this, "${UpdateChecker.REPO_URL}/releases")
         }

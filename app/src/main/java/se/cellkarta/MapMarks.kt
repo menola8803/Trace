@@ -63,14 +63,22 @@ object MapMarks {
             BitmapDrawable(ctx.resources, bmp)
         }
 
-    /** Förklaringsruta med tunn kant. Den stängs när man trycker på den. */
+    /**
+     * Förklaringsruta med tunn kant. Den ligger kvar, även när kartan ritas om,
+     * tills man trycker bredvid den på kartan.
+     */
     class Bubble(map: MapView) : InfoWindow(R.layout.info_bubble, map) {
+        /** Vilken markering rutan hör till, så att den kan öppnas igen efter omritning. */
+        var openKey: String? = null
+
         override fun onOpen(item: Any?) {
             val m = item as? OverlayWithIW ?: return
+            openKey = (item as? org.osmdroid.views.overlay.Marker)?.relatedObject as? String
             mView.findViewById<TextView>(R.id.bubbleTitle).text = m.title
             mView.findViewById<TextView>(R.id.bubbleBody).text =
                 Html.fromHtml(m.snippet.orEmpty(), Html.FROM_HTML_MODE_COMPACT)
-            mView.setOnClickListener { close() }
+            // Tryck i själva rutan gör ingenting, så att den inte stängs av misstag.
+            mView.setOnClickListener { }
         }
 
         override fun onClose() {}

@@ -109,17 +109,6 @@
             android:textColor="@color/mint"
             android:textSize="13sp" />
 
-        <TextView
-            android:id="@+id/aboutSource"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp"
-            android:background="?android:attr/selectableItemBackground"
-            android:gravity="center"
-            android:paddingHorizontal="12dp"
-            android:text="github.com/menola8803/Trace"
-            android:textColor="@color/gold"
-            android:textSize="13sp" />
 
         <TextView
             android:layout_width="match_parent"

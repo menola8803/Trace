@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.osmdroid.api.IGeoPoint
 import org.osmdroid.config.Configuration
+import org.osmdroid.events.MapEventsReceiver
 import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
@@ -51,6 +52,7 @@ import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.infowindow.InfoWindow
@@ -166,7 +168,7 @@ class MainActivity : BaseActivity() {
                 StartScreenView(this) {
                     root.removeView(it)
                     maybeShowStorageInfo()
-                },
+                }.apply { elevation = 100f * resources.displayMetrics.density },
                 FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             )
         } else {
@@ -523,9 +525,12 @@ class MainActivity : BaseActivity() {
     }
 
     private fun draw(d: MapData) {
+        // Kartan ritas om ofta. Är en förklaringsruta öppen öppnas den igen på samma markering.
+        val keepOpen = bubble.openKey
         InfoWindow.closeAllInfoWindowsOn(map)
         val overlays = map.overlays
         overlays.clear()
+        overlays.add(tapOutside)
 
         if (d.known.isNotEmpty()) overlays.add(knownOverlay(d.known))
         d.clusters.forEach { overlays.add(clusterMarker(it)) }
@@ -541,7 +546,25 @@ class MainActivity : BaseActivity() {
         }
         overlays.add(myLocation)
 
+        if (keepOpen != null) {
+            overlays.filterIsInstance<Marker>().firstOrNull { it.relatedObject == keepOpen }?.showInfoWindow()
+                ?: run { bubble.openKey = null }
+        }
         map.invalidate()
+    }
+
+    /** Ett tryck bredvid en förklaringsruta, på själva kartan, stänger den. */
+    private val tapOutside by lazy {
+        MapEventsOverlay(object : MapEventsReceiver {
+            override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
+                if (bubble.openKey == null && !bubble.isOpen) return false
+                bubble.openKey = null
+                InfoWindow.closeAllInfoWindowsOn(map)
+                return true
+            }
+
+            override fun longPressHelper(p: GeoPoint?): Boolean = false
+        })
     }
 
     private fun knownOverlay(cells: List<KnownCell>): SimpleFastPointOverlay {
@@ -598,6 +621,7 @@ class MainActivity : BaseActivity() {
         position = GeoPoint(e.lat, e.lon)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_serving)
+        relatedObject = "serving"
         title = getString(R.string.connected_now)
         snippet = listOf(
             Texts.row(getString(R.string.row_cell), Texts.cellLabel(e.key)),
@@ -653,6 +677,7 @@ class MainActivity : BaseActivity() {
     private fun antennaMarker(e: CellEntry, lastTrackPoint: Geo.TrackPoint?, events: List<FlagRow>) = Marker(map).apply {
         position = if (lastTrackPoint != null) GeoPoint(lastTrackPoint.lat, lastTrackPoint.lon) else GeoPoint(e.lat, e.lon)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        relatedObject = "antenna:${e.key}"
         val main = e.reasonTypes.firstOrNull() ?: CellDb.FLAG_NEW
         icon = MapMarks.icon(this@MainActivity, "!", MapMarks.colorFor(main), 34f)
         title = "! " + e.reasons(this@MainActivity).joinToString(" · ")
@@ -680,6 +705,7 @@ class MainActivity : BaseActivity() {
     private fun eventMarker(f: FlagRow) = Marker(map).apply {
         position = GeoPoint(f.lat, f.lon)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+        relatedObject = "event:${f.key}:${f.type}:${f.ts}"
         icon = MapMarks.icon(this@MainActivity, "?", MapMarks.colorFor(f.type), 28f)
         val ctx = this@MainActivity
         title = "? " + Texts.eventTitle(ctx, f.type)
@@ -718,6 +744,7 @@ class MainActivity : BaseActivity() {
             map.overlays.add(Marker(map).apply {
                 position = GeoPoint(p.lat, p.lon)
                 setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                relatedObject = "track:$key:${p.ts}"
                 icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_track_point)
                 title = fmt(p.ts)
                 snippet = Texts.cellLabel(key) + "<br>" + tr(R.string.track_point, p.samples)
