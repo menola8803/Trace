@@ -80,6 +80,15 @@ class SettingsActivity : BaseActivity() {
 
         setupSchedule()
 
+        // Karta
+        findViewById<Switch>(R.id.switchMastDetails).apply {
+            isChecked = Prefs.mastDetails(this@SettingsActivity)
+            setOnCheckedChangeListener { _, on ->
+                Prefs.setMastDetails(this@SettingsActivity, on)
+                LiveStatus.bump()
+            }
+        }
+
         // Updates
         findViewById<TextView>(R.id.versionValue).text =
             tr(R.string.version_value, UpdateChecker.currentVersionName(this), UpdateChecker.currentBuild(this))

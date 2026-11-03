@@ -48,6 +48,20 @@
             </RadioGroup>
         </LinearLayout>
 
+        <!-- Karta -->
+        <TextView style="@style/Trace.Section" android:text="@string/map_section" />
+        <LinearLayout style="@style/Trace.Card">
+            <Switch
+                android:id="@+id/switchMastDetails"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/mast_details"
+                android:textColor="@color/ink"
+                android:textSize="16sp" />
+            <TextView style="@style/Trace.Label" android:layout_marginTop="4dp" android:textSize="12sp" android:text="@string/mast_details_desc" />
+        </LinearLayout>
+
         <!-- Schemalagd inspelning -->
         <TextView style="@style/Trace.Section" android:text="@string/sched_section" />
         <LinearLayout style="@style/Trace.Card">

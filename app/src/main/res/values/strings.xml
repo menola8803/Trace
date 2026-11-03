@@ -282,6 +282,25 @@
 
     <string name="replay_error">Uppspelningen stannade: %1$s</string>
 
+    <!-- Mastinformation -->
+    <string name="map_section">KARTA</string>
+    <string name="mast_details">Mastinformation</string>
+    <string name="mast_details_desc">Visar operatör, mast och sektor i klartext, en uppskattad mastplats från OpenCellID och en länk till CellMapper i cellernas rutor.</string>
+    <string name="row_operator_name">Operatör</string>
+    <string name="row_tac">Område (TAC)</string>
+    <string name="row_lac">Område (LAC)</string>
+    <string name="row_mast_id">Mast</string>
+    <string name="row_sector">Sektor</string>
+    <string name="row_mast_pos">Uppskattad mastplats</string>
+    <string name="row_sectors_known">Kända sektorer</string>
+    <string name="mast_pos_value">cirka %1$d m åt %2$s från där du hörde den (%3$d sektorer i OpenCellID)</string>
+    <string name="mast_pos_unknown">okänd, masten finns inte i OpenCellID</string>
+    <string name="open_cellmapper">Öppna i CellMapper  ›</string>
+    <string-array name="compass">
+        <item>norr</item><item>nordost</item><item>öster</item><item>sydost</item>
+        <item>söder</item><item>sydväst</item><item>väster</item><item>nordväst</item>
+    </string-array>
+
     <!-- Händelseknappen -->
     <string name="events_button">Händelser</string>
     <string name="events_title">Händelser</string>

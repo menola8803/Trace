@@ -213,6 +213,14 @@ class CellDb private constructor(ctx: Context) :
             if (c.moveToFirst()) c.getDouble(0) to c.getDouble(1) else null
         }
 
+    /** Alla kända celler för en operatör och ett nät, till exempel "LTE:240:7:". Använder nyckelns index. */
+    fun knownWithPrefix(prefix: String): List<KnownCell> {
+        val upper = prefix.dropLast(1) + ';' // ';' kommer direkt efter ':' i teckentabellen
+        return readableDatabase.rawQuery(
+            "SELECT cell_key, lat, lon FROM known_cells WHERE cell_key >= ? AND cell_key < ?", arrayOf(prefix, upper)
+        ).use { c -> buildList { while (c.moveToNext()) add(KnownCell(c.getString(0), c.getDouble(1), c.getDouble(2))) } }
+    }
+
     fun knownInBox(s: Double, w: Double, n: Double, e: Double, limit: Int): List<KnownCell> {
         val sql = "SELECT cell_key, lat, lon FROM known_cells " +
             "WHERE lat BETWEEN ${num(s)} AND ${num(n)} AND lon BETWEEN ${num(w)} AND ${num(e)} LIMIT $limit"

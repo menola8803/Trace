@@ -265,6 +265,24 @@
 
     <string name="replay_error">Replay stopped: %1$s</string>
 
+    <string name="map_section">MAP</string>
+    <string name="mast_details">Mast details</string>
+    <string name="mast_details_desc">Shows operator, mast and sector in plain text, an estimated mast location from OpenCellID and a link to CellMapper in the cell boxes.</string>
+    <string name="row_operator_name">Operator</string>
+    <string name="row_tac">Area (TAC)</string>
+    <string name="row_lac">Area (LAC)</string>
+    <string name="row_mast_id">Mast</string>
+    <string name="row_sector">Sector</string>
+    <string name="row_mast_pos">Estimated mast location</string>
+    <string name="row_sectors_known">Known sectors</string>
+    <string name="mast_pos_value">about %1$d m %2$s of where you heard it (%3$d sectors in OpenCellID)</string>
+    <string name="mast_pos_unknown">unknown, the mast is not in OpenCellID</string>
+    <string name="open_cellmapper">Open in CellMapper  ›</string>
+    <string-array name="compass">
+        <item>north</item><item>north-east</item><item>east</item><item>south-east</item>
+        <item>south</item><item>south-west</item><item>west</item><item>north-west</item>
+    </string-array>
+
     <string name="events_button">Events</string>
     <string name="events_title">Events</string>
     <string name="events_new">%1$d new</string>

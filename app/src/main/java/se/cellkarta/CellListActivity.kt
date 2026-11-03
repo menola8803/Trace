@@ -131,6 +131,14 @@ class CellListActivity : BaseActivity() {
     private fun fmt(ts: Long) = timeFmt.format(Instant.ofEpochMilli(ts))
 
     private fun showDetails(e: CellEntry) {
+        if (!Prefs.mastDetails(this)) return showDetails(e, null)
+        lifecycleScope.launch {
+            val info = withContext(Dispatchers.IO) { MastInfo.of(CellDb.get(this@CellListActivity), e.key) }
+            showDetails(e, info)
+        }
+    }
+
+    private fun showDetails(e: CellEntry, info: MastInfo?) {
         val parts = e.key.split(':')
         val text = buildString {
             val ctx = this@CellListActivity
@@ -147,6 +155,10 @@ class CellListActivity : BaseActivity() {
             appendLine("${getString(R.string.row_best)}: ${e.bestDbm?.let { "$it dBm" } ?: getString(R.string.unknown_value)}")
             appendLine(String.format(Locale.ROOT, "${getString(R.string.row_position)}: %.5f, %.5f", e.lat, e.lon))
             if (!e.known) appendLine("\n" + getString(R.string.cells_not_in_ref))
+            if (info != null) {
+                appendLine()
+                info.rows(ctx, e.lat, e.lon).forEach { appendLine(it.replace(Regex("<[^>]+>"), "")) }
+            }
         }
 
         AlertDialog.Builder(this)
@@ -165,7 +177,11 @@ class CellListActivity : BaseActivity() {
                     .setPrimaryClip(ClipData.newPlainText("Cell-ID", e.key))
                 Toast.makeText(this, R.string.cells_copied, Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton(R.string.close, null)
+            .apply {
+                if (info != null) setNegativeButton("CellMapper") { _, _ ->
+                    UpdateChecker.open(this@CellListActivity, info.cellMapperUrl(e.lat, e.lon))
+                } else setNegativeButton(R.string.close, null)
+            }
             .show()
     }
 

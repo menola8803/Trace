@@ -97,6 +97,7 @@ class MainActivity : BaseActivity() {
         val tracks: Map<String, List<Geo.TrackPoint>>,
         val events: List<FlagRow>,
         val masts: List<Pair<UserMast, MastGuess>>,
+        val mastInfo: Map<String, MastInfo>,
         val counts: Counts,
     )
 
@@ -809,9 +810,16 @@ class MainActivity : BaseActivity() {
             .associate { it.key to Geo.track(db.observations(it.key, 0L, 5000)) }
         val events = db.allFlags(400)
         val masts = db.masts().map { it to MastGuess.of(db, it.lat, it.lon) }
+        // Mastinformation för cellerna som får en ruta, om det är påslaget i Settings
+        val mastInfo = if (!Prefs.mastDetails(this)) emptyMap() else
+            (if (own.size <= OWN_MARKER_LIMIT) own.map { it.key } else emptyList())
+                .plus(anomalies.map { it.key })
+                .distinct()
+                .mapNotNull { k -> MastInfo.of(db, k)?.let { k to it } }
+                .toMap()
 
         return MapData(
-            clusters, known, own, anomalies, tracks, events, masts,
+            clusters, known, own, anomalies, tracks, events, masts, mastInfo,
             Counts(db.knownCount(), db.seenCount(), anomalies.size, events.size)
         )
     }
@@ -829,7 +837,7 @@ class MainActivity : BaseActivity() {
         // Din position ritas under markeringarna. Annars döljer figuren cellerna du hört där du står.
         overlays.add(myLocation)
         // Dina celler med nättypens siffra. Är de väldigt många ritas de som enkla prickar.
-        if (d.own.size in 1..OWN_MARKER_LIMIT) d.own.forEach { overlays.add(ownMarker(it)) }
+        if (d.own.size in 1..OWN_MARKER_LIMIT) d.own.forEach { overlays.add(ownMarker(it, d.mastInfo[it.key])) }
         else if (d.own.isNotEmpty()) overlays.add(ownOverlay(d.own))
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
@@ -839,7 +847,8 @@ class MainActivity : BaseActivity() {
         d.events.forEach { overlays.add(eventMarker(it)) }
         val flagsByKey = d.events.groupBy { it.key }
         d.anomalies.forEach {
-            overlays.add(antennaMarker(it, d.tracks[it.key]?.lastOrNull(), flagsByKey[it.key].orEmpty().sortedBy { f -> f.ts }))
+            overlays.add(antennaMarker(it, d.tracks[it.key]?.lastOrNull(), flagsByKey[it.key].orEmpty().sortedBy { f -> f.ts },
+                d.mastInfo[it.key]))
         }
 
         if (keepOpen != null) {
@@ -925,7 +934,7 @@ class MainActivity : BaseActivity() {
     }
 
     /** En av dina celler: prick med 2, 3, 4 eller 5 och en ruta med detaljer. */
-    private fun ownMarker(e: CellEntry) = Marker(map).apply {
+    private fun ownMarker(e: CellEntry, info: MastInfo?) = Marker(map).apply {
         position = GeoPoint(e.lat, e.lon)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         val net = Net.of(e.key)
@@ -939,9 +948,14 @@ class MainActivity : BaseActivity() {
             Texts.row(getString(R.string.row_best), e.bestDbm?.let { "$it dBm" } ?: getString(R.string.unknown_value)),
             Texts.row(getString(R.string.row_first), fmt(e.firstTs)),
             Texts.row(getString(R.string.row_last), fmt(e.lastTs)),
-        ).joinToString("<br>")
+        ).plus(mastRows(info, e.lat, e.lon)).joinToString("<br>")
+        subDescription = info?.cellMapperUrl(e.lat, e.lon)
         setInfoWindow(bubble)
     }
+
+    /** Mastinformationen som extra rader i rutan, med en tom rad före. */
+    private fun mastRows(info: MastInfo?, lat: Double, lon: Double): List<String> =
+        if (info == null) emptyList() else listOf("") + info.rows(this, lat, lon)
 
     private fun servingMarker(e: CellEntry) = Marker(map).apply {
         position = GeoPoint(e.lat, e.lon)
@@ -1000,7 +1014,9 @@ class MainActivity : BaseActivity() {
      * Utropstecken med ring på en onormal antenn. Ringens färg visar den viktigaste orsaken:
      * röd rör sig, rosa onormal styrka, grön kortvarig, guld ny. En cell som rör sig visas där den hördes senast.
      */
-    private fun antennaMarker(e: CellEntry, lastTrackPoint: Geo.TrackPoint?, events: List<FlagRow>) = Marker(map).apply {
+    private fun antennaMarker(
+        e: CellEntry, lastTrackPoint: Geo.TrackPoint?, events: List<FlagRow>, info: MastInfo?,
+    ) = Marker(map).apply {
         position = if (lastTrackPoint != null) GeoPoint(lastTrackPoint.lat, lastTrackPoint.lon) else GeoPoint(e.lat, e.lon)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         relatedObject = "antenna:${e.key}"
@@ -1021,9 +1037,11 @@ class MainActivity : BaseActivity() {
                 val detail = Texts.detailText(ctx, f.type, f.detail)
                 if (detail.isNotBlank()) add(Texts.row(Texts.reasonName(ctx, f.type), "$detail (${fmt(f.ts)})"))
             }
+            addAll(mastRows(info, e.lat, e.lon))
             add("")
             add("<i>${getString(R.string.expl_not_proof)}</i>")
         }.joinToString("<br>")
+        subDescription = info?.cellMapperUrl(e.lat, e.lon)
         setInfoWindow(bubble)
     }
 

@@ -146,6 +146,15 @@ object MapMarks {
             mView.findViewById<TextView>(R.id.bubbleTitle).text = m.title
             mView.findViewById<TextView>(R.id.bubbleBody).text =
                 Html.fromHtml(m.snippet.orEmpty(), Html.FROM_HTML_MODE_COMPACT)
+            // Länk till CellMapper, om markeringen har en (lagras i subDescription)
+            val link = mView.findViewById<TextView>(R.id.bubbleLink)
+            val url = (item as? org.osmdroid.views.overlay.Marker)?.subDescription
+            if (!url.isNullOrBlank() && url.startsWith("https://")) {
+                link.visibility = android.view.View.VISIBLE
+                link.setOnClickListener { UpdateChecker.open(mView.context, url) }
+            } else {
+                link.visibility = android.view.View.GONE
+            }
             // Tryck i själva rutan gör ingenting, så att den inte stängs av misstag.
             mView.setOnClickListener { }
         }
