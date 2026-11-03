@@ -607,6 +607,7 @@ class MainActivity : BaseActivity() {
                 setPadding(p, p, p, (8 * d).toInt())
                 layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (10 * d).toInt() }
             }
+            list.addView(card)
             card.addView(label(dayFmt.format(java.time.LocalDate.parse(day.day)).replaceFirstChar { it.titlecase(loc) },
                 R.color.ink, 15f, bold = true))
             card.addView(label(tr(R.string.log_day_summary, day.measurements, day.cells,
