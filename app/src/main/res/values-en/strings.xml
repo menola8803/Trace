@@ -263,6 +263,8 @@
     <string name="reset_all_done">All recordings are removed.</string>
     <string name="reset_do">Remove</string>
 
+    <string name="replay_error">Replay stopped: %1$s</string>
+
     <string name="events_button">Events</string>
     <string name="events_title">Events</string>
     <string name="events_new">%1$d new</string>

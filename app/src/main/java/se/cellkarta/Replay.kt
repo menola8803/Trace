@@ -72,6 +72,7 @@ class Replay(
     private val eventRow = panel.findViewById<View>(R.id.replayEventRow)
     private val btnPrev = panel.findViewById<Button>(R.id.btnReplayPrev)
     private val btnNext = panel.findViewById<Button>(R.id.btnReplayNext)
+    private val chart = panel.findViewById<SignalChart>(R.id.replayChart)
 
     private var rows: List<ReplayRow> = emptyList()
     private var path: List<ReplayRow> = emptyList()
@@ -126,6 +127,7 @@ class Replay(
             } catch (e: Exception) {
                 Log.w(TAG, "Uppspelningen stoppades", e)
                 pause()
+                infoText.text = act.tr(R.string.replay_error, e.javaClass.simpleName + (e.message?.let { ": $it" } ?: ""))
             }
         }
     }
@@ -177,12 +179,17 @@ class Replay(
                 t0 = minOf(rows.firstOrNull()?.ts ?: Long.MAX_VALUE, events.firstOrNull()?.ts ?: Long.MAX_VALUE)
                 t1 = maxOf(rows.lastOrNull()?.ts ?: 0L, events.lastOrNull()?.ts ?: 0L)
                 eventRow.visibility = if (events.isEmpty()) View.GONE else View.VISIBLE
+                chart.setData(
+                    t0, t1,
+                    rows.filter { it.registered && it.dbm != null }.map { SignalChart.Point(it.ts, it.dbm!!, it.key) },
+                    events.map { SignalChart.Mark(it.ts, MapMarks.colorFor(it.type)) },
+                )
 
                 val focus = startAt?.let { s -> events.indices.minByOrNull { kotlin.math.abs(events[it].ts - s) } }
                 if (focus != null) {
                     jumpToEvent(focus)
                 } else {
-                    speedIx = DAY_SPEED
+                    speedIx = speedFor(t1 - t0)
                     stopAt = null
                     focusIx = -1
                     reset()
@@ -196,7 +203,7 @@ class Replay(
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Kunde inte starta uppspelningen", e)
-                infoText.text = act.getString(R.string.error_generic)
+                infoText.text = act.tr(R.string.replay_error, e.javaClass.simpleName + (e.message?.let { ": $it" } ?: ""))
             }
         }
     }
@@ -210,6 +217,12 @@ class Replay(
         InfoWindow.closeAllInfoWindowsOn(map)
         panel.visibility = View.GONE
         onClose()
+    }
+
+    /** Väljer den hastighet som spelar upp inspelningen på ungefär 40 sekunder. */
+    private fun speedFor(spanMs: Long): Int {
+        val wanted = spanMs / 1000.0 / 40.0
+        return SPEEDS.indices.minByOrNull { kotlin.math.abs(kotlin.math.ln(SPEEDS[it] / wanted.coerceAtLeast(1.0))) } ?: DAY_SPEED
     }
 
     // ---- Händelseläge ----
@@ -384,6 +397,7 @@ class Replay(
         }
 
         timeText.text = clock.format(Instant.ofEpochMilli(cur))
+        chart.setCursor(cur)
         val focus = events.getOrNull(focusIx)
         infoText.text = listOfNotNull(
             focus?.let {

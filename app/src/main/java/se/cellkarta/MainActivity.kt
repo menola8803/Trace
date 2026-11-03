@@ -177,6 +177,12 @@ class MainActivity : BaseActivity() {
         findViewById<View>(R.id.btnReplayDay).setOnClickListener { chooseReplayDay() }
         findViewById<View>(R.id.btnReplay).setOnClickListener { chooseReplayDay() }
         findViewById<View>(R.id.btnBackLive).setOnClickListener { replay.close() }
+        // Under uppspelning slutar kartan ovanför panelen, så att positionen alltid syns.
+        findViewById<View>(R.id.replayPanel).addOnLayoutChangeListener { v, _, top, _, bottom, _, _, _, _ ->
+            val margin = if (v.visibility == View.VISIBLE) bottom - top else 0
+            val lp = map.layoutParams as MarginLayoutParams
+            if (lp.bottomMargin != margin) map.post { map.updateLayoutParams<MarginLayoutParams> { bottomMargin = margin } }
+        }
         onBackPressedDispatcher.addCallback(this, replayBack)
         onBackPressedDispatcher.addCallback(this, pickerBack)
         findViewById<View>(R.id.pickerScrim).setOnClickListener { hidePicker() }
@@ -686,6 +692,7 @@ class MainActivity : BaseActivity() {
     /** Tillbaka till Live-kartan: samma utsnitt och zoom som före uppspelningen. */
     private fun backToLive() {
         replayBack.isEnabled = false
+        map.updateLayoutParams<MarginLayoutParams> { bottomMargin = 0 }
         showReplayMode(false)
         savedCenter?.let {
             map.controller.setZoom(savedZoom)

@@ -280,6 +280,8 @@
     <string name="reset_all_done">Alla inspelningar är borttagna.</string>
     <string name="reset_do">Ta bort</string>
 
+    <string name="replay_error">Uppspelningen stannade: %1$s</string>
+
     <!-- Händelseknappen -->
     <string name="events_button">Händelser</string>
     <string name="events_title">Händelser</string>

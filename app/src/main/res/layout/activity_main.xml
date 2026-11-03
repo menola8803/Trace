@@ -234,6 +234,12 @@
             android:textColor="@color/muted"
             android:textSize="13sp" />
 
+        <se.cellkarta.SignalChart
+            android:id="@+id/replayChart"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="8dp" />
+
         <SeekBar
             android:id="@+id/replaySeek"
             android:layout_width="match_parent"
