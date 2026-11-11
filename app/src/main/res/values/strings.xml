@@ -353,6 +353,10 @@
     <string name="tri_ring_value">%1$d m från den här punkten</string>
     <string name="legend_tri">Beräknad</string>
 
+    <string name="tri_failed">Beräkningen misslyckades: %1$s</string>
+    <string name="tri_done">Masten beräknad: %1$s, ±%2$d m. Tryck på den för detaljer.</string>
+    <string name="tri_done_few">Bara %1$d plats med mätningar. Gå runt masten med inspelningen på och beräkna igen.</string>
+
     <!-- Händelseknappen -->
     <string name="events_button">Händelser</string>
     <string name="events_title">Händelser</string>

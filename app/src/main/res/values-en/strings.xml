@@ -333,6 +333,10 @@
     <string name="tri_ring_value">%1$d m from this point</string>
     <string name="legend_tri">Calculated</string>
 
+    <string name="tri_failed">The calculation failed: %1$s</string>
+    <string name="tri_done">Mast located: %1$s, ±%2$d m. Tap it for details.</string>
+    <string name="tri_done_few">Only %1$d place with measurements. Walk around the mast while recording and locate again.</string>
+
     <string name="events_button">Events</string>
     <string name="events_title">Events</string>
     <string name="events_new">%1$d new</string>

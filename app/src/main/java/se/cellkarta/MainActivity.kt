@@ -902,10 +902,16 @@ class MainActivity : BaseActivity() {
     private fun locateMast(siteKey: String) {
         toast(getString(R.string.tri_calculating))
         lifecycleScope.launch {
-            val r = withContext(Dispatchers.Default) {
-                runCatching { Triangulate.forSite(db, siteKey) }.getOrNull()
+            val outcome = withContext(Dispatchers.Default) { runCatching { Triangulate.forSite(db, siteKey) } }
+            outcome.exceptionOrNull()?.let { e ->
+                return@launch toast(tr(R.string.tri_failed, e.javaClass.simpleName + (e.message?.let { ": $it" } ?: "")))
             }
-            if (r == null || r.places < 1) return@launch toast(getString(R.string.tri_not_enough))
+            val r = outcome.getOrNull() ?: return@launch toast(getString(R.string.tri_not_enough))
+            // Säg direkt vad resultatet blev, och varför det är osäkert om det är det
+            toast(
+                if (r.places < 3) tr(R.string.tri_done_few, r.places)
+                else tr(R.string.tri_done, qualityLabel(r.quality), Triangulate.round(r.radiusM))
+            )
             triResults[siteKey] = r
             bubble.openKey = "tri:$siteKey"
             map.controller.animateTo(GeoPoint(r.lat, r.lon))

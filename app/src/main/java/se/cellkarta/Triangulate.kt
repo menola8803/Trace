@@ -72,7 +72,7 @@ object Triangulate {
         if (p.size != 4) return null
         val prefix = "${p[0]}:${p[1]}:${p[2]}:"
         val site = p[3].toLong()
-        val obs = db.triObservations(prefix, 50.0).filter { Operators.mastId(it.key)?.second == site }
+        val obs = db.triObservations(prefix, CellMonitorService.MAX_ACCURACY_M.toDouble()).filter { Operators.mastId(it.key)?.second == site }
         if (obs.isEmpty()) return null
         val known = MastLookup.siteCells(db, p[0], p[1].toInt(), p[2].toInt(), site)
         return solve(siteKey, p[0], Operators.name(p[1].toInt(), p[2].toInt()), site, obs, known)
