@@ -952,12 +952,19 @@ class MainActivity : BaseActivity() {
         val gold = ContextCompat.getColor(this, R.color.gold)
         val tri = MapMarks.COLOR_TRI
 
-        // Osäkerhetscirkel
+        // Osäkerhetscirkel. Bara små, säkra cirklar fylls; stora ritas som en tunn streckad kant
+        // så att de inte färgar hela kartan.
+        val fillAlpha = when {
+            r.radiusM <= 150 -> 45
+            r.radiusM <= 400 -> 22
+            else -> 0
+        }
         map.overlays.add(Polygon(map).apply {
             points = Polygon.pointsAsCircle(center, r.radiusM)
-            fillPaint.color = Color.argb(40, Color.red(tri), Color.green(tri), Color.blue(tri))
-            outlinePaint.color = Color.argb(200, Color.red(tri), Color.green(tri), Color.blue(tri))
-            outlinePaint.strokeWidth = 2f * density
+            fillPaint.color = Color.argb(fillAlpha, Color.red(tri), Color.green(tri), Color.blue(tri))
+            outlinePaint.color = Color.argb(if (r.radiusM <= 400) 210 else 140, Color.red(tri), Color.green(tri), Color.blue(tri))
+            outlinePaint.strokeWidth = (if (r.radiusM <= 400) 2f else 1.5f) * density
+            if (r.radiusM > 400) outlinePaint.pathEffect = DashPathEffect(floatArrayOf(10f * density, 8f * density), 0f)
             setInfoWindow(null)
             setOnClickListener { _, _, _ -> false }
         })
