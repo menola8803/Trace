@@ -4,8 +4,6 @@ import android.os.Bundle
 import android.view.View
 import android.widget.TextView
 import androidx.core.content.ContextCompat
-import androidx.core.text.buildSpannedString
-import androidx.core.text.color
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -28,10 +26,7 @@ class AboutActivity : BaseActivity() {
 
         Ui.header(this, getString(R.string.about_trace), getString(R.string.about_sub))
 
-        findViewById<TextView>(R.id.headline).text = buildSpannedString {
-            append(getString(R.string.about_headline_1) + " ")
-            color(ContextCompat.getColor(this@AboutActivity, R.color.mint)) { append(getString(R.string.about_headline_2)) }
-        }
+        findViewById<TextView>(R.id.headline).text = getString(R.string.about_headline_2)
 
         findViewById<TextView>(R.id.aboutVersion).text =
             tr(R.string.about_version, UpdateChecker.currentVersionName(this), UpdateChecker.currentBuild(this))
