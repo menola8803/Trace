@@ -54,6 +54,7 @@ import org.osmdroid.views.CustomZoomButtonsController
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.MapEventsOverlay
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polygon
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.views.overlay.infowindow.InfoWindow
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
@@ -156,6 +157,25 @@ class MainActivity : BaseActivity() {
         status = findViewById(R.id.status)
         btnRecord = findViewById(R.id.btnRecord)
         bubble = MapMarks.Bubble(map)
+        // Knappen Beräkna mast i cellernas rutor, och Beräkna igen i den beräknade mastens ruta
+        bubble.actionLabel = { m ->
+            val tag = m.relatedObject as? String
+            when {
+                Prefs.triMode(this) == Prefs.TRI_OFF || tag == null -> null
+                tag.startsWith("tri:") -> getString(R.string.tri_again)
+                cellKeyOf(tag)?.let { Triangulate.siteKeyOf(it) } != null -> getString(R.string.tri_locate)
+                else -> null
+            }
+        }
+        bubble.onAction = { m ->
+            val tag = m.relatedObject as? String
+            val siteKey = when {
+                tag == null -> null
+                tag.startsWith("tri:") -> tag.removePrefix("tri:")
+                else -> cellKeyOf(tag)?.let { Triangulate.siteKeyOf(it) }
+            }
+            if (siteKey != null) locateMast(siteKey)
+        }
 
         findViewById<TextView>(R.id.legend).text = legendText()
 
@@ -210,6 +230,7 @@ class MainActivity : BaseActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { LiveStatus.state.collect { renderStatus(it) } }
                 launch { LiveStatus.dataVersion.collect { scheduleRefresh(0) } }
+                launch { triTicker() }
             }
         }
     }
@@ -240,6 +261,7 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        findViewById<TextView>(R.id.legend).text = legendText()
         map.onResume()
         enableMyLocation()
     }
@@ -284,7 +306,12 @@ class MainActivity : BaseActivity() {
         Net.entries.forEach { mark(MapMarks.netDot(this@MainActivity, it, 18f)) }
         append(" ${getString(R.string.legend_own)}   ")
         mark(dot(COLOR_KNOWN)); append(" ${getString(R.string.legend_known)}   ")
-        mark(MapMarks.mastIcon(this@MainActivity, 24f)); append(" ${getString(R.string.legend_mast)}\n")
+        mark(MapMarks.mastIcon(this@MainActivity, 24f)); append(" ${getString(R.string.legend_mast)}")
+        if (Prefs.triMode(this@MainActivity) != Prefs.TRI_OFF) {
+            append("   ")
+            mark(MapMarks.mastIcon(this@MainActivity, 24f, MapMarks.COLOR_TRI)); append(" ${getString(R.string.legend_tri)}")
+        }
+        append("\n")
         mark(MapMarks.icon(this@MainActivity, "!", MapMarks.COLOR_MOVING, 22f)); append(" ${getString(R.string.legend_antenna)}   ")
         mark(MapMarks.icon(this@MainActivity, "?", MapMarks.COLOR_NEW, 22f)); append(" ${getString(R.string.legend_event)}")
     }
@@ -841,6 +868,8 @@ class MainActivity : BaseActivity() {
         else if (d.own.isNotEmpty()) overlays.add(ownOverlay(d.own))
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
+        // Beräknade master: osäkerhetscirkel, avståndsringar, sektorpilar och masten
+        if (Prefs.triMode(this) != Prefs.TRI_OFF) triResults.values.forEach { addTriangulation(it) }
         d.masts.forEach { (m, g) -> overlays.add(mastMarker(m, g)) }
         d.tracks.forEach { (key, points) -> addTrack(key, points) }
         // Frågetecken där det hände, sedan utropstecken på antennerna överst.
@@ -859,6 +888,133 @@ class MainActivity : BaseActivity() {
     }
 
     /** Ett tryck bredvid en förklaringsruta, på själva kartan, stänger den. */
+    // ---- Triangulering ----
+
+    /** Beräknade master, per mast ("LTE:240:7:331321"). */
+    private val triResults = LinkedHashMap<String, Triangulate.Result>()
+    private var lastTriAt = 0L
+
+    /** "own:KEY", "antenna:KEY" och "serving:KEY" bär en cellnyckel. */
+    private fun cellKeyOf(tag: String): String? =
+        if (tag.startsWith("own:") || tag.startsWith("antenna:") || tag.startsWith("serving:")) tag.substringAfter(':') else null
+
+    /** Beräkna en mast vid behov, när man trycker Beräkna mast i en ruta. */
+    private fun locateMast(siteKey: String) {
+        toast(getString(R.string.tri_calculating))
+        lifecycleScope.launch {
+            val r = withContext(Dispatchers.Default) {
+                runCatching { Triangulate.forSite(db, siteKey) }.getOrNull()
+            }
+            if (r == null || r.places < 1) return@launch toast(getString(R.string.tri_not_enough))
+            triResults[siteKey] = r
+            bubble.openKey = "tri:$siteKey"
+            map.controller.animateTo(GeoPoint(r.lat, r.lon))
+            scheduleRefresh(0)
+        }
+    }
+
+    /** Med fast intervall: beräkna om masterna för cellerna i bilden medan du spelar in. */
+    private suspend fun triTicker() {
+        while (true) {
+            delay(30_000L)
+            val mode = Prefs.triMode(this)
+            if (mode <= 0 || !LiveStatus.state.value.running || replay.active) continue
+            if (System.currentTimeMillis() - lastTriAt < mode * 60_000L) continue
+            lastTriAt = System.currentTimeMillis()
+            val box = map.boundingBox
+            val results = withContext(Dispatchers.Default) {
+                runCatching {
+                    db.seenInBox(box.latSouth, box.lonWest, box.latNorth, box.lonEast, 2000)
+                        .mapNotNull { Triangulate.siteKeyOf(it.key) }.distinct().take(8)
+                        .mapNotNull { Triangulate.forSite(db, it) }
+                }.getOrDefault(emptyList())
+            }
+            results.forEach { triResults[it.siteKey] = it }
+            if (results.isNotEmpty()) scheduleRefresh(0)
+        }
+    }
+
+    private fun qualityLabel(q: Triangulate.Quality) = getString(when (q) {
+        Triangulate.Quality.INSUFFICIENT -> R.string.q_insufficient
+        Triangulate.Quality.ROUGH -> R.string.q_rough
+        Triangulate.Quality.GOOD -> R.string.q_good
+        Triangulate.Quality.SECURE -> R.string.q_secure
+    })
+
+    private fun addTriangulation(r: Triangulate.Result) {
+        val center = GeoPoint(r.lat, r.lon)
+        val gold = ContextCompat.getColor(this, R.color.gold)
+        val tri = MapMarks.COLOR_TRI
+
+        // Osäkerhetscirkel
+        map.overlays.add(Polygon(map).apply {
+            points = Polygon.pointsAsCircle(center, r.radiusM)
+            fillPaint.color = Color.argb(40, Color.red(tri), Color.green(tri), Color.blue(tri))
+            outlinePaint.color = Color.argb(200, Color.red(tri), Color.green(tri), Color.blue(tri))
+            outlinePaint.strokeWidth = 2f * density
+            setInfoWindow(null)
+            setOnClickListener { _, _, _ -> false }
+        })
+
+        // Avståndsringar från Timing Advance, runt mätpunkterna
+        r.rings.forEach { ring ->
+            map.overlays.add(Polygon(map).apply {
+                points = Polygon.pointsAsCircle(GeoPoint(ring.lat, ring.lon), ring.radiusM)
+                fillPaint.color = Color.TRANSPARENT
+                outlinePaint.color = Color.argb(150, Color.red(gold), Color.green(gold), Color.blue(gold))
+                outlinePaint.strokeWidth = 1.5f * density
+                outlinePaint.pathEffect = DashPathEffect(floatArrayOf(8f * density, 6f * density), 0f)
+                setInfoWindow(null)
+                setOnClickListener { _, _, _ -> false }
+            })
+        }
+
+        // Sektorernas riktning: pilar från masten
+        val len = maxOf(60.0, minOf(200.0, r.radiusM * 1.5))
+        r.sectors.forEach { s ->
+            val tip = center.destinationPoint(len, s.bearingDeg)
+            val left = tip.destinationPoint(len * 0.18, s.bearingDeg + 150)
+            val right = tip.destinationPoint(len * 0.18, s.bearingDeg - 150)
+            map.overlays.add(Polyline(map).apply {
+                setPoints(listOf(center, tip, left, tip, right))
+                outlinePaint.color = tri
+                outlinePaint.strokeWidth = 3f * density
+                outlinePaint.strokeCap = Paint.Cap.ROUND
+                setInfoWindow(null)
+            })
+        }
+
+        // Masten
+        map.overlays.add(Marker(map).apply {
+            position = center
+            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+            icon = MapMarks.mastIcon(this@MainActivity, 40f, tri)
+            relatedObject = "tri:${r.siteKey}"
+            title = tr(R.string.tri_title_op, r.operator)
+            snippet = triRows(r).joinToString("<br>")
+            setInfoWindow(bubble)
+        })
+    }
+
+    private fun triRows(r: Triangulate.Result): List<String> = buildList {
+        add(Texts.row(getString(R.string.tri_quality), qualityLabel(r.quality)))
+        add(Texts.row(getString(R.string.tri_uncertainty), tr(R.string.tri_unc_value, Triangulate.round(r.radiusM))))
+        add(Texts.row(getString(R.string.tri_measurements), tr(R.string.tri_meas_value, r.points, r.places)))
+        add(Texts.row(getString(R.string.tri_ta),
+            if (r.taPoints > 0) tr(R.string.tri_ta_value, r.taPoints) else getString(R.string.tri_ta_none)))
+        if (r.sectors.isNotEmpty()) add(Texts.row(getString(R.string.tri_sectors),
+            r.sectors.joinToString(", ") { tr(R.string.tri_sector_value, "${it.sector ?: "?"}", Triangulate.compass(this@MainActivity, it.bearingDeg)) }))
+        add(Texts.row(getString(R.string.tri_ocid),
+            r.ocidDistM?.let { tr(R.string.tri_ocid_value, Triangulate.round(it)) } ?: getString(R.string.tri_ocid_none)))
+        add(Texts.row(getString(R.string.tri_advice),
+            r.adviceOctant?.let { tr(R.string.tri_advice_value, resources.getStringArray(R.array.compass)[it]) }
+                ?: getString(R.string.tri_advice_done)))
+        add(Texts.row(getString(R.string.row_mast_id), "${r.radio} ${r.site}"))
+        add(Texts.row(getString(R.string.row_position), String.format(Locale.ROOT, "%.5f, %.5f", r.lat, r.lon)))
+        add("")
+        add("<i>${getString(R.string.tri_note)}</i>")
+    }
+
     private val tapOutside by lazy {
         MapEventsOverlay(object : MapEventsReceiver {
             override fun singleTapConfirmedHelper(p: GeoPoint?): Boolean {
@@ -961,7 +1117,7 @@ class MainActivity : BaseActivity() {
         position = GeoPoint(e.lat, e.lon)
         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
         icon = ContextCompat.getDrawable(this@MainActivity, R.drawable.ic_serving)
-        relatedObject = "serving"
+        relatedObject = "serving:${e.key}"
         title = getString(R.string.connected_now)
         snippet = listOf(
             Texts.row(getString(R.string.row_cell), Texts.cellLabel(e.key)),

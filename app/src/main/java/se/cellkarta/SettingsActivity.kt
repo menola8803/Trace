@@ -61,21 +61,59 @@ class SettingsActivity : BaseActivity() {
             v.updatePadding(top = top + bars.top, bottom = bottom + bars.bottom, left = bars.left, right = bars.right)
             insets
         }
-        findViewById<TextView>(R.id.btnBack).apply {
-            text = "‹  ${getString(R.string.settings)}"
-            setOnClickListener { finish() }
+        Ui.header(this, getString(R.string.settings), getString(R.string.settings_sub))
+
+        // Utseende: mörkt eller beige, som i Alif
+        findViewById<LinearLayout>(R.id.themeRow).apply {
+            val current = Prefs.theme(this@SettingsActivity)
+            listOf(Prefs.THEME_DARK to R.string.theme_dark, Prefs.THEME_BEIGE to R.string.theme_beige).forEach { (name, label) ->
+                addView(Ui.themePreview(this@SettingsActivity, name == Prefs.THEME_DARK, name == current, getString(label)) {
+                    if (name != Prefs.theme(this@SettingsActivity)) {
+                        Prefs.setTheme(this@SettingsActivity, name)
+                        recreate()
+                    }
+                }.apply {
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                })
+            }
         }
 
         // Språk
-        findViewById<RadioGroup>(R.id.languageGroup).apply {
-            check(if (Prefs.language(this@SettingsActivity) == Lang.SV) R.id.langSv else R.id.langEn)
-            setOnCheckedChangeListener { _, id ->
-                val tag = if (id == R.id.langSv) Lang.SV else Lang.EN
-                if (tag != Prefs.language(this@SettingsActivity)) {
-                    Prefs.setLanguage(this@SettingsActivity, tag)
-                    recreate()
-                }
+        findViewById<android.widget.FrameLayout>(R.id.languageSeg).addView(Ui.Segmented(this).apply {
+            set(listOf(0 to getString(R.string.language_sv), 1 to getString(R.string.language_en)),
+                if (Prefs.language(this@SettingsActivity) == Lang.SV) 0 else 1)
+            onChange = { v ->
+                Prefs.setLanguage(this@SettingsActivity, if (v == 0) Lang.SV else Lang.EN)
+                recreate()
             }
+        })
+
+        // Triangulering
+        val triOptions = listOf(
+            Prefs.TRI_OFF to getString(R.string.tri_off),
+            Prefs.TRI_ON_DEMAND to getString(R.string.tri_on_demand),
+            1 to tr(R.string.tri_min, 1), 5 to tr(R.string.tri_min, 5), 15 to tr(R.string.tri_min, 15),
+        )
+        val triStatus = findViewById<TextView>(R.id.triStatus)
+        fun showTri(mode: Int) {
+            triStatus.text = when (mode) {
+                Prefs.TRI_OFF -> getString(R.string.tri_status_off)
+                Prefs.TRI_ON_DEMAND -> getString(R.string.tri_status_demand)
+                else -> tr(R.string.tri_status_interval, mode)
+            }
+        }
+        findViewById<android.widget.FrameLayout>(R.id.triSeg).addView(Ui.Segmented(this).apply {
+            set(triOptions, Prefs.triMode(this@SettingsActivity))
+            onChange = { v ->
+                Prefs.setTriMode(this@SettingsActivity, v)
+                showTri(v)
+                LiveStatus.bump()
+            }
+        })
+        showTri(Prefs.triMode(this))
+        findViewById<Switch>(R.id.switchTa).apply {
+            isChecked = Prefs.timingAdvance(this@SettingsActivity)
+            setOnCheckedChangeListener { _, on -> Prefs.setTimingAdvance(this@SettingsActivity, on) }
         }
 
         setupSchedule()

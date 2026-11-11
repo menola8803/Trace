@@ -13,39 +13,48 @@
         android:orientation="vertical"
         android:paddingHorizontal="16dp">
 
-        <TextView
-            android:id="@+id/btnBack"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:background="?android:attr/selectableItemBackground"
-            android:fontFamily="@font/jakarta_bold"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="4dp"
-            android:textColor="@color/ink"
-            android:textSize="20sp" />
+        <include layout="@layout/view_header" />
+
+        <!-- Utseende: tema som i Alif -->
+        <TextView style="@style/Trace.Section" android:layout_marginTop="12dp" android:text="@string/theme_section" />
+        <LinearLayout style="@style/Trace.Card">
+            <LinearLayout
+                android:id="@+id/themeRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="horizontal" />
+        </LinearLayout>
 
         <!-- Språk -->
-        <TextView style="@style/Trace.Section" android:layout_marginTop="12dp" android:text="@string/language_section" />
-        <LinearLayout style="@style/Trace.Card" android:paddingVertical="6dp">
-            <RadioGroup
-                android:id="@+id/languageGroup"
+        <TextView style="@style/Trace.Section" android:text="@string/language_section" />
+        <FrameLayout
+            android:id="@+id/languageSeg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <!-- Triangulering -->
+        <TextView style="@style/Trace.Section" android:text="@string/tri_section" />
+        <LinearLayout style="@style/Trace.Card">
+            <TextView style="@style/Trace.Value" android:layout_marginTop="0dp" android:fontFamily="@font/jakarta_bold" android:text="@string/tri_title" />
+            <TextView style="@style/Trace.Label" android:layout_marginTop="2dp" android:text="@string/tri_desc" />
+            <FrameLayout
+                android:id="@+id/triSeg"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <RadioButton
-                    android:id="@+id/langSv"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:text="@string/language_sv"
-                    android:textColor="@color/ink"
-                    android:textSize="16sp" />
-                <RadioButton
-                    android:id="@+id/langEn"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:text="@string/language_en"
-                    android:textColor="@color/ink"
-                    android:textSize="16sp" />
-            </RadioGroup>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp" />
+            <TextView android:id="@+id/triStatus" style="@style/Trace.Label" android:layout_marginTop="8dp" android:textSize="12sp" />
+
+            <View style="@style/Trace.Divider" />
+            <Switch
+                android:id="@+id/switchTa"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/ta_title"
+                android:textColor="@color/ink"
+                android:textSize="16sp" />
+            <TextView style="@style/Trace.Label" android:layout_marginTop="2dp" android:textSize="12sp" android:text="@string/ta_desc" />
         </LinearLayout>
 
         <!-- Karta -->

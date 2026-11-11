@@ -24,7 +24,7 @@ object TraceFiles {
     private val RELATIVE = Environment.DIRECTORY_DOWNLOADS + "/Trace/"
     private const val INFO_FILE = "LAS-MIG-README.txt"
 
-    private const val MEASUREMENT_HEADER = "time_utc,cell,radio,lat,lon,accuracy_m,dbm,connected\n"
+    private const val MEASUREMENT_HEADER = "time_utc,cell,radio,lat,lon,accuracy_m,dbm,connected,ta_m\n"
     private const val EVENT_HEADER = "time_utc,type,cell,lat,lon,details\n"
 
     private val uris = HashMap<String, Uri>()

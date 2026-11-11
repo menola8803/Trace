@@ -283,6 +283,56 @@
         <item>south</item><item>south-west</item><item>west</item><item>north-west</item>
     </string-array>
 
+    <string name="back">Back</string>
+    <string name="theme_section">APPEARANCE</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_beige">Beige</string>
+    <string name="settings_sub">Language, appearance, recording and updates</string>
+    <string name="log_sub">Everything recorded, day by day</string>
+    <string name="about_sub">Developer and version</string>
+
+    <string name="tri_section">TRIANGULATION</string>
+    <string name="tri_title">Work out where the masts are</string>
+    <string name="tri_desc">Works out the mast location from measurements at different places. Walk around the mast for the best result.</string>
+    <string name="tri_off">Off</string>
+    <string name="tri_on_demand">On demand</string>
+    <string name="tri_min">%1$d min</string>
+    <string name="tri_status_off">Off. No calculation is made.</string>
+    <string name="tri_status_demand">Tap Locate mast in a cell\'s box on the map.</string>
+    <string name="tri_status_interval">Recalculated every %1$d minutes while you record.</string>
+    <string name="ta_title">Exact distance (Timing Advance)</string>
+    <string name="ta_desc">Keeps mobile data active while recording so the network reports the distance to the mast, about 78 m per step. Uses a little data and battery.</string>
+
+    <string name="tri_locate">Locate mast  ›</string>
+    <string name="tri_again">Locate again  ›</string>
+    <string name="tri_calculating">Locating the mast…</string>
+    <string name="tri_not_enough">Too few measurements of this mast. Record at a few different places around it.</string>
+    <string name="tri_title_op">Calculated mast · %1$s</string>
+    <string name="tri_quality">Quality</string>
+    <string name="q_insufficient">too few places</string>
+    <string name="q_rough">rough</string>
+    <string name="q_good">good</string>
+    <string name="q_secure">reliable</string>
+    <string name="tri_uncertainty">Uncertainty</string>
+    <string name="tri_unc_value">±%1$d m</string>
+    <string name="tri_measurements">Measurements</string>
+    <string name="tri_meas_value">%1$d measurements from %2$d places</string>
+    <string name="tri_ta">Exact distance</string>
+    <string name="tri_ta_value">%1$d points with Timing Advance</string>
+    <string name="tri_ta_none">none, turn on Exact distance in Settings</string>
+    <string name="tri_sectors">Sectors</string>
+    <string name="tri_sector_value">%1$s points %2$s</string>
+    <string name="tri_ocid">OpenCellID</string>
+    <string name="tri_ocid_value">%1$d m from OpenCellID\'s position</string>
+    <string name="tri_ocid_none">the mast is not in OpenCellID</string>
+    <string name="tri_advice">Tip</string>
+    <string name="tri_advice_value">measure from the %1$s to improve</string>
+    <string name="tri_advice_done">the measurements surround the mast well</string>
+    <string name="tri_note">Estimate from your measurements. Signals bounce off buildings, so the real location may differ.</string>
+    <string name="tri_ring">Distance from Timing Advance</string>
+    <string name="tri_ring_value">%1$d m from this point</string>
+    <string name="legend_tri">Calculated</string>
+
     <string name="events_button">Events</string>
     <string name="events_title">Events</string>
     <string name="events_new">%1$d new</string>

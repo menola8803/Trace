@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Mörkt tema i samma stil som Direct, Alif och USB -->
-    <style name="AppTheme" parent="android:Theme.Material.NoActionBar">
+    <!-- Beige tema (Alif: beige) -->
+    <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:colorPrimary">@color/gold</item>
         <item name="android:colorAccent">@color/gold</item>
         <item name="android:colorControlActivated">@color/gold</item>
@@ -15,6 +15,8 @@
         <item name="android:alertDialogTheme">@style/Trace.Dialog</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/card</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
     <style name="Trace.Button" parent="android:Widget.Material.Button">
@@ -32,7 +34,7 @@
         <item name="android:textColor">@color/on_gold</item>
     </style>
 
-    <style name="Trace.Dialog" parent="android:Theme.Material.Dialog.Alert">
+    <style name="Trace.Dialog" parent="android:Theme.Material.Light.Dialog.Alert">
         <item name="android:colorAccent">@color/gold</item>
         <item name="android:windowBackground">@drawable/bg_dialog</item>
         <item name="android:textColorPrimary">@color/ink</item>
@@ -42,7 +44,7 @@
 
     <!-- Systemets startskärm, som sedan går över i Trace egna animerade startskärm -->
     <style name="Theme.Trace.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/bg_deep</item>
+        <item name="windowSplashScreenBackground">@color/splash_bg</item>
         <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
         <item name="windowSplashScreenAnimationDuration">300</item>
         <item name="postSplashScreenTheme">@style/AppTheme</item>

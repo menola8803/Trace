@@ -21,6 +21,8 @@ object MapMarks {
     val COLOR_SHORT = Color.rgb(29, 158, 117)
     val COLOR_NEW = Color.rgb(232, 176, 74)
     val COLOR_DOWNGRADE = Color.rgb(127, 119, 221)
+    /** Beräknad mast: mint, för att skiljas från egna markerade master i guld. */
+    val COLOR_TRI = Color.rgb(95, 196, 180)
 
     fun colorFor(type: String): Int = when (type) {
         CellDb.FLAG_MOVING -> COLOR_MOVING
@@ -95,17 +97,18 @@ object MapMarks {
         })
 
     /** Egen mastmarkering: guldring med en sändande mast, i samma stil som Trace-ikonen. */
-    fun mastIcon(ctx: Context, sizeDp: Float = 38f): BitmapDrawable = drawable(ctx, cache.getOrPut("mast-$sizeDp") {
+    fun mastIcon(ctx: Context, sizeDp: Float = 38f, ring: Int = Color.rgb(232, 176, 74)): BitmapDrawable =
+        drawable(ctx, cache.getOrPut("mast-$sizeDp-$ring") {
         val d = ctx.resources.displayMetrics.density
         val size = (sizeDp * d).toInt()
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val r = size / 2f
-        val gold = Color.rgb(232, 176, 74)
+        val gold = ring
         val pale = Color.rgb(243, 217, 160)
         val p = Paint(Paint.ANTI_ALIAS_FLAG)
 
-        p.color = Color.argb(80, 232, 176, 74)
+        p.color = Color.argb(80, Color.red(ring), Color.green(ring), Color.blue(ring))
         c.drawCircle(r, r, r, p)
         p.color = Color.argb(245, 23, 38, 41)
         c.drawCircle(r, r, r * 0.74f, p)
@@ -140,6 +143,10 @@ object MapMarks {
         /** Vilken markering rutan hör till, så att den kan öppnas igen efter omritning. */
         var openKey: String? = null
 
+        /** Text för en knapp i rutan, till exempel Beräkna mast, eller null för ingen knapp. */
+        var actionLabel: ((org.osmdroid.views.overlay.Marker) -> String?)? = null
+        var onAction: ((org.osmdroid.views.overlay.Marker) -> Unit)? = null
+
         override fun onOpen(item: Any?) {
             val m = item as? OverlayWithIW ?: return
             openKey = (item as? org.osmdroid.views.overlay.Marker)?.relatedObject as? String
@@ -154,6 +161,16 @@ object MapMarks {
                 link.setOnClickListener { UpdateChecker.open(mView.context, url) }
             } else {
                 link.visibility = android.view.View.GONE
+            }
+            val action = mView.findViewById<TextView>(R.id.bubbleAction)
+            val marker = item as? org.osmdroid.views.overlay.Marker
+            val label = marker?.let { actionLabel?.invoke(it) }
+            if (marker != null && label != null) {
+                action.text = label
+                action.visibility = android.view.View.VISIBLE
+                action.setOnClickListener { onAction?.invoke(marker) }
+            } else {
+                action.visibility = android.view.View.GONE
             }
             // Tryck i själva rutan gör ingenting, så att den inte stängs av misstag.
             mView.setOnClickListener { }

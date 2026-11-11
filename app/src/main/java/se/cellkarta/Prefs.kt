@@ -17,6 +17,16 @@ object Prefs {
     private const val KEY_MAST_TIP = "mast_tip_shown"
     private const val KEY_EVENTS_SEEN = "events_seen"
     private const val KEY_MAST_DETAILS = "mast_details"
+    private const val KEY_THEME = "theme"
+    private const val KEY_TRI_MODE = "tri_mode"
+    private const val KEY_TA = "timing_advance"
+
+    const val THEME_DARK = "dark"
+    const val THEME_BEIGE = "beige"
+
+    /** Triangulering: av, vid behov eller med fast intervall i minuter. */
+    const val TRI_OFF = 0
+    const val TRI_ON_DEMAND = -1
     private const val KEY_LAST_UPDATE_CHECK = "last_update_check"
 
     private fun sp(ctx: Context) = ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -57,4 +67,19 @@ object Prefs {
     fun mastDetails(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_MAST_DETAILS, false)
 
     fun setMastDetails(ctx: Context, on: Boolean) = sp(ctx).edit { putBoolean(KEY_MAST_DETAILS, on) }
+
+    /** Mörkt tema är förvalt, som i Alif. */
+    fun theme(ctx: Context): String = sp(ctx).getString(KEY_THEME, null) ?: THEME_DARK
+
+    fun setTheme(ctx: Context, name: String) = sp(ctx).edit { putString(KEY_THEME, name) }
+
+    /** TRI_OFF, TRI_ON_DEMAND eller antal minuter mellan beräkningarna. Av från början. */
+    fun triMode(ctx: Context): Int = sp(ctx).getInt(KEY_TRI_MODE, TRI_OFF)
+
+    fun setTriMode(ctx: Context, mode: Int) = sp(ctx).edit { putInt(KEY_TRI_MODE, mode) }
+
+    /** Exakt avstånd med Timing Advance: håller mobildata igång under inspelning. Av från början. */
+    fun timingAdvance(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_TA, false)
+
+    fun setTimingAdvance(ctx: Context, on: Boolean) = sp(ctx).edit { putBoolean(KEY_TA, on) }
 }

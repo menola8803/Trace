@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Tonad övergång från appens mörka bakgrund ner i kartan -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient android:angle="270" android:startColor="#FF0F1A1C" android:centerColor="#990F1A1C" android:endColor="#000F1A1C" />
+    <gradient android:angle="270" android:startColor="@color/scrim_top" android:centerColor="@color/scrim_mid" android:endColor="@color/scrim_end" />
 </shape>

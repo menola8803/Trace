@@ -107,7 +107,7 @@ data class KnownCell(val key: String, val lat: Double, val lon: Double)
  *  flags        avvikelser: ny cell, cell som flyttar sig, nedgradering
  */
 class CellDb private constructor(ctx: Context) :
-    SQLiteOpenHelper(ctx, "cellkarta.db", null, 3) {
+    SQLiteOpenHelper(ctx, "cellkarta.db", null, 4) {
 
     companion object {
         const val FLAG_NEW = "NEW"
@@ -141,7 +141,7 @@ class CellDb private constructor(ctx: Context) :
         db.execSQL(
             "CREATE TABLE obs(id INTEGER PRIMARY KEY AUTOINCREMENT, cell_key TEXT NOT NULL, " +
                 "radio TEXT NOT NULL, ts INTEGER NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, " +
-                "acc REAL, dbm INTEGER, registered INTEGER NOT NULL)"
+                "acc REAL, dbm INTEGER, registered INTEGER NOT NULL, ta_m REAL)"
         )
         db.execSQL("CREATE INDEX idx_obs_key_ts ON obs(cell_key, ts)")
         db.execSQL("CREATE INDEX idx_obs_ts ON obs(ts)")
@@ -162,6 +162,7 @@ class CellDb private constructor(ctx: Context) :
         // Behåller alla sparade mätningar vid uppdatering.
         if (oldVersion < 2) db.execSQL("CREATE INDEX IF NOT EXISTS idx_obs_ts ON obs(ts)")
         if (oldVersion < 3) createMasts(db)
+        if (oldVersion < 4) db.execSQL("ALTER TABLE obs ADD COLUMN ta_m REAL")
     }
 
     /** Master som användaren själv har markerat på kartan. */
@@ -259,6 +260,7 @@ class CellDb private constructor(ctx: Context) :
                 put("acc", acc)
                 if (c.dbm != null) put("dbm", c.dbm) else putNull("dbm")
                 put("registered", if (c.registered) 1 else 0)
+                if (c.taM != null) put("ta_m", c.taM) else putNull("ta_m")
             })
 
             db.rawQuery(
@@ -432,6 +434,26 @@ class CellDb private constructor(ctx: Context) :
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()
+        }
+    }
+
+    /** En mätning för trianguleringen: plats, noggrannhet, signal och avstånd. */
+    data class TriObs(val key: String, val lat: Double, val lon: Double, val acc: Double, val dbm: Int?, val taM: Double?, val ts: Long)
+
+    /** Mätningar av alla celler som börjar med prefixet (operatör och nät), till exempel "LTE:240:7:". */
+    fun triObservations(prefix: String, maxAccM: Double, limit: Int = 50_000): List<TriObs> {
+        val upper = prefix.dropLast(1) + ';'
+        return readableDatabase.rawQuery(
+            "SELECT cell_key, lat, lon, acc, dbm, ta_m, ts FROM obs WHERE cell_key >= ? AND cell_key < ? " +
+                "AND (acc IS NULL OR acc <= $maxAccM) ORDER BY ts DESC LIMIT $limit",
+            arrayOf(prefix, upper)
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(TriObs(c.getString(0), c.getDouble(1), c.getDouble(2), if (c.isNull(3)) 0.0 else c.getDouble(3),
+                        if (c.isNull(4)) null else c.getInt(4), if (c.isNull(5)) null else c.getDouble(5), c.getLong(6)))
+                }
+            }
         }
     }
 

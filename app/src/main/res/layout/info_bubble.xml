@@ -32,6 +32,18 @@
         android:textSize="12.5sp" />
 
     <TextView
+        android:id="@+id/bubbleAction"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="6dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:fontFamily="@font/jakarta_bold"
+        android:gravity="center_vertical"
+        android:textColor="@color/gold"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/bubbleLink"
         android:layout_width="wrap_content"
         android:layout_height="40dp"

@@ -60,8 +60,9 @@ class Detector(private val ctx: android.content.Context, private val db: CellDb,
         val time = java.time.Instant.ofEpochMilli(now).toString()
         TraceFiles.appendMeasurements(ctx, now, cells.map { c ->
             String.format(
-                Locale.ROOT, "%s,%s,%s,%.7f,%.7f,%.0f,%s,%d\n",
-                time, c.key, c.radio, lat, lon, loc.accuracy, c.dbm?.toString() ?: "", if (c.registered) 1 else 0
+                Locale.ROOT, "%s,%s,%s,%.7f,%.7f,%.0f,%s,%d,%s\n",
+                time, c.key, c.radio, lat, lon, loc.accuracy, c.dbm?.toString() ?: "", if (c.registered) 1 else 0,
+                c.taM?.let { String.format(Locale.ROOT, "%.0f", it) } ?: ""
             )
         })
 

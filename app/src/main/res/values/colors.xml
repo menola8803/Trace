@@ -1,19 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Samma palett som Direct, Alif och USB: mörk petroleumgrön, guld och mint -->
+<!-- Beige tema, samma som Alif: ljust, kolsvart och brons -->
 <resources>
-    <color name="bg">#0F1A1C</color>
-    <color name="bg_deep">#0B1416</color>
-    <color name="card">#172629</color>
-    <color name="chip">#1E3236</color>
-    <color name="line">#25393D</color>
-    <color name="ink">#EAF1EF</color>
-    <color name="muted">#B7C6C3</color>
-    <color name="dim">#8FA5A2</color>
-    <color name="gold">#E8B04A</color>
-    <color name="gold_dim">#8A6D2E</color>
-    <color name="gold_pale">#F3D9A0</color>
-    <color name="mint">#5FC4B4</color>
-    <color name="teal">#17393E</color>
-    <color name="danger">#E8776D</color>
-    <color name="on_gold">#0F1A1C</color>
+    <color name="bg">#EFEDE8</color>
+    <color name="bg_deep">#E6E2DA</color>
+    <color name="card">#FAF8F4</color>
+    <color name="chip">#E9E2D3</color>
+    <color name="line">#DDD8CD</color>
+    <color name="ink">#26231F</color>
+    <color name="muted">#6A6358</color>
+    <color name="dim">#8C8477</color>
+    <color name="gold">#26231F</color>
+    <color name="gold_dim">#B5A68A</color>
+    <color name="gold_pale">#7A5C2B</color>
+    <color name="mint">#7A5C2B</color>
+    <color name="teal">#E9E2D3</color>
+    <color name="danger">#A8403A</color>
+    <color name="on_gold">#F3E9D2</color>
+    <color name="overlay">#EBFAF8F4</color>
+    <color name="bubble">#F7FAF8F4</color>
+    <color name="scrim">#66000000</color>
+    <color name="scrim_top">#FFEFEDE8</color>
+    <color name="scrim_mid">#99EFEDE8</color>
+    <color name="scrim_end">#00EFEDE8</color>
+    <color name="ripple">#2226231F</color>
+    <color name="ripple_primary">#33F3E9D2</color>
+
+    <!-- Alifs segmentknappar -->
+    <color name="seg_bg">#DBFAF8F4</color>
+    <color name="seg_border">#DDD8CD</color>
+    <color name="seg_on">#E9E2D3</color>
+    <color name="seg_on_border">#DDD8CD</color>
+
+    <!-- Systemets startskärm är alltid mörk -->
+    <color name="splash_bg">#0B1416</color>
 </resources>

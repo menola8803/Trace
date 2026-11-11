@@ -220,7 +220,16 @@ class CellListActivity : BaseActivity() {
             v.findViewById<TextView>(R.id.cellMeta).text =
                 tr(R.string.cells_meta, e.count, e.bestDbm?.toString() ?: "?", fmt(e.lastTs))
 
-            val fg = when {
+            val beige = Prefs.theme(this@CellListActivity) == Prefs.THEME_BEIGE
+            val fg = if (beige) when {
+                e.moving -> Color.rgb(163, 45, 45)
+                e.strong -> Color.rgb(153, 53, 86)
+                e.shortLived -> Color.rgb(15, 110, 86)
+                e.isNew -> Color.rgb(133, 79, 11)
+                e.downgraded -> Color.rgb(83, 74, 183)
+                e.known -> Color.rgb(106, 99, 88)
+                else -> Color.rgb(122, 92, 43)
+            } else when {
                 e.moving -> Color.rgb(240, 149, 149)
                 e.strong -> Color.rgb(237, 147, 177)
                 e.shortLived -> Color.rgb(95, 196, 180)

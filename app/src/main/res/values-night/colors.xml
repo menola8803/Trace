@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mörkt tema, samma som Direct och Alif: petroleumgrön, guld och mint -->
+<resources>
+    <color name="bg">#0F1A1C</color>
+    <color name="bg_deep">#0B1416</color>
+    <color name="card">#172629</color>
+    <color name="chip">#1E3236</color>
+    <color name="line">#25393D</color>
+    <color name="ink">#EAF1EF</color>
+    <color name="muted">#B7C6C3</color>
+    <color name="dim">#8FA5A2</color>
+    <color name="gold">#E8B04A</color>
+    <color name="gold_dim">#8A6D2E</color>
+    <color name="gold_pale">#F3D9A0</color>
+    <color name="mint">#5FC4B4</color>
+    <color name="teal">#17393E</color>
+    <color name="danger">#E8776D</color>
+    <color name="on_gold">#0F1A1C</color>
+    <color name="overlay">#E6172629</color>
+    <color name="bubble">#F2172629</color>
+    <color name="scrim">#990B1416</color>
+    <color name="scrim_top">#FF0F1A1C</color>
+    <color name="scrim_mid">#990F1A1C</color>
+    <color name="scrim_end">#000F1A1C</color>
+    <color name="ripple">#33E8B04A</color>
+    <color name="ripple_primary">#33FFFFFF</color>
+
+    <!-- Alifs segmentknappar -->
+    <color name="seg_bg">#C7132225</color>
+    <color name="seg_border">#38E8B04A</color>
+    <color name="seg_on">#1FE8B04A</color>
+    <color name="seg_on_border">#80E8B04A</color>
+
+    <!-- Systemets startskärm är alltid mörk -->
+    <color name="splash_bg">#0B1416</color>
+</resources>

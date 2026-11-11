@@ -301,6 +301,58 @@
         <item>söder</item><item>sydväst</item><item>väster</item><item>nordväst</item>
     </string-array>
 
+    <!-- Tema och sidhuvud -->
+    <string name="back">Tillbaka</string>
+    <string name="theme_section">UTSEENDE</string>
+    <string name="theme_dark">Mörkt</string>
+    <string name="theme_beige">Beige</string>
+    <string name="settings_sub">Språk, utseende, inspelning och uppdateringar</string>
+    <string name="log_sub">Allt som har spelats in, dag för dag</string>
+    <string name="about_sub">Utvecklare och version</string>
+
+    <!-- Triangulering -->
+    <string name="tri_section">TRIANGULERING</string>
+    <string name="tri_title">Beräkna var masterna står</string>
+    <string name="tri_desc">Räknar ut mastens plats från mätningar på olika platser. Gå runt masten för bästa resultat.</string>
+    <string name="tri_off">Av</string>
+    <string name="tri_on_demand">Vid behov</string>
+    <string name="tri_min">%1$d min</string>
+    <string name="tri_status_off">Av. Ingen beräkning görs.</string>
+    <string name="tri_status_demand">Tryck Beräkna mast i en cells ruta på kartan.</string>
+    <string name="tri_status_interval">Beräknas om var %1$d:e minut medan du spelar in.</string>
+    <string name="ta_title">Exakt avstånd (Timing Advance)</string>
+    <string name="ta_desc">Håller mobildata igång under inspelning så att nätet anger avståndet till masten, cirka 78 m per steg. Förbrukar lite data och batteri.</string>
+
+    <string name="tri_locate">Beräkna mast  ›</string>
+    <string name="tri_again">Beräkna igen  ›</string>
+    <string name="tri_calculating">Beräknar masten…</string>
+    <string name="tri_not_enough">För få mätningar av den här masten. Spela in på några olika platser runt den.</string>
+    <string name="tri_title_op">Beräknad mast · %1$s</string>
+    <string name="tri_quality">Kvalitet</string>
+    <string name="q_insufficient">för få platser</string>
+    <string name="q_rough">grov</string>
+    <string name="q_good">bra</string>
+    <string name="q_secure">säker</string>
+    <string name="tri_uncertainty">Osäkerhet</string>
+    <string name="tri_unc_value">±%1$d m</string>
+    <string name="tri_measurements">Mätningar</string>
+    <string name="tri_meas_value">%1$d mätningar från %2$d platser</string>
+    <string name="tri_ta">Exakt avstånd</string>
+    <string name="tri_ta_value">%1$d punkter med Timing Advance</string>
+    <string name="tri_ta_none">inga, slå på Exakt avstånd i Settings</string>
+    <string name="tri_sectors">Sektorer</string>
+    <string name="tri_sector_value">%1$s pekar åt %2$s</string>
+    <string name="tri_ocid">OpenCellID</string>
+    <string name="tri_ocid_value">%1$d m från OpenCellIDs position</string>
+    <string name="tri_ocid_none">masten finns inte i OpenCellID</string>
+    <string name="tri_advice">Tips</string>
+    <string name="tri_advice_value">mät från %1$s för att förbättra</string>
+    <string name="tri_advice_done">mätningarna omger masten väl</string>
+    <string name="tri_note">Uppskattning från dina mätningar. Signaler studsar mot hus, så den verkliga platsen kan avvika.</string>
+    <string name="tri_ring">Avstånd enligt Timing Advance</string>
+    <string name="tri_ring_value">%1$d m från den här punkten</string>
+    <string name="legend_tri">Beräknad</string>
+
     <!-- Händelseknappen -->
     <string name="events_button">Händelser</string>
     <string name="events_title">Händelser</string>

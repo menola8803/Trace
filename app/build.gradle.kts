@@ -26,6 +26,11 @@ android {
         targetSdk = 35
         versionCode = buildNumber
         versionName = "0.1.$buildNumber"
+
+        // Bara 64-bitars ARM, som alla telefoner med Android 10 eller senare har. Inget för x86.
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     signingConfigs {

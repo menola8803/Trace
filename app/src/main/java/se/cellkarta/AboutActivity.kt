@@ -26,10 +26,7 @@ class AboutActivity : BaseActivity() {
             insets
         }
 
-        findViewById<TextView>(R.id.btnBack).apply {
-            text = "‹  ${getString(R.string.about_trace)}"
-            setOnClickListener { finish() }
-        }
+        Ui.header(this, getString(R.string.about_trace), getString(R.string.about_sub))
 
         findViewById<TextView>(R.id.headline).text = buildSpannedString {
             append(getString(R.string.about_headline_1) + " ")

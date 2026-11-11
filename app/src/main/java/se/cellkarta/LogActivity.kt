@@ -38,10 +38,7 @@ class LogActivity : BaseActivity() {
         setContentView(R.layout.activity_log)
         list = findViewById(R.id.logList)
 
-        findViewById<TextView>(R.id.btnBack).apply {
-            text = "‹  ${getString(R.string.log_title)}"
-            setOnClickListener { finish() }
-        }
+        Ui.header(this, getString(R.string.log_title), getString(R.string.log_sub))
         val root = findViewById<View>(R.id.logRoot)
         val top = root.paddingTop
         ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->

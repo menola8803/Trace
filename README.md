@@ -179,3 +179,19 @@ Tryck på en markering för en förklaringsruta med tid, styrka och detaljer. Tr
 ## Språk
 
 Engelska är förvalt. Svenska väljs under **Inställningar → Språk**, och då byter hela appen, även startskärmen.
+
+## Triangulering
+
+**Settings → Triangulering** räknar ut var masterna står från dina mätningar på olika platser.
+Av från början. Välj **Vid behov** (tryck *Beräkna mast* i en cells ruta) eller ett intervall på 1, 5 eller 15 minuter
+under inspelning.
+
+**Exakt avstånd (Timing Advance)** håller mobildata igång under inspelning så att nätet anger avståndet till
+antennen, cirka 78 m per steg. Ger mycket bättre resultat, men förbrukar lite data och batteri. Av från början.
+
+På kartan syns den beräknade masten i mint, en osäkerhetscirkel, avståndsringarna och pilar för sektorernas riktning.
+Rutan visar kvalitet, osäkerhet, antal mätningar och platser, och åt vilket håll du ska gå för att förbättra.
+
+## Utseende
+
+Mörkt eller beige tema, samma som Alif, under **Settings → Utseende**. APK:n byggs bara för arm64-v8a.

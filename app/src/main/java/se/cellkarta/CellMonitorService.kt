@@ -76,6 +76,7 @@ class CellMonitorService : Service(), LocationListener {
             started = true
             startLocationUpdates()
             startDisplayInfo()
+            if (Prefs.timingAdvance(this)) taKeeper.start()
             handler.post(tick)
             LiveStatus.setRunning(true)
         }
@@ -86,6 +87,7 @@ class CellMonitorService : Service(), LocationListener {
         handler.removeCallbacks(tick)
         lm.removeUpdates(this)
         stopDisplayInfo()
+        taKeeper.stop()
         worker.shutdown()
         started = false
         LiveStatus.setRunning(false)
@@ -150,6 +152,7 @@ class CellMonitorService : Service(), LocationListener {
     // ---- Vad statusraden visar: 4G, 4G+, 5G via 4G ----
 
     private var displayCallback: Any? = null
+    private val taKeeper by lazy { TaKeeper(this) }
 
     private fun startDisplayInfo() {
         if (android.os.Build.VERSION.SDK_INT < 31) return
