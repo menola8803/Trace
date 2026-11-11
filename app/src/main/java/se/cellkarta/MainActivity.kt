@@ -891,7 +891,7 @@ class MainActivity : BaseActivity() {
     // ---- Triangulering ----
 
     /** Beräknade master, per mast ("LTE:240:7:331321"). */
-    private val triResults = LinkedHashMap<String, Triangulate.Result>()
+    private val triResults get() = TriStore.results
     private var lastTriAt = 0L
 
     /** "own:KEY", "antenna:KEY" och "serving:KEY" bär en cellnyckel. */
@@ -999,9 +999,35 @@ class MainActivity : BaseActivity() {
             icon = MapMarks.mastIcon(this@MainActivity, 40f, tri)
             relatedObject = "tri:${r.siteKey}"
             title = tr(R.string.tri_title_op, r.operator)
-            snippet = triRows(r).joinToString("<br>")
+            snippet = (triRows(r) + "<i>${getString(R.string.tri_tap_again)}</i>").joinToString("<br>")
             setInfoWindow(bubble)
+            // Tryck en gång: rutan. Tryck igen: fråga om den ska tas bort.
+            setOnMarkerClickListener { marker, _ ->
+                if (bubble.isOpen && bubble.openKey == marker.relatedObject) confirmRemoveTri(r.siteKey)
+                else marker.showInfoWindow()
+                true
+            }
         })
+    }
+
+    private fun confirmRemoveTri(siteKey: String) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.tri_remove_title)
+            .setMessage(R.string.tri_remove_msg)
+            .setPositiveButton(R.string.remove) { _, _ ->
+                triResults.remove(siteKey)
+                bubble.openKey = null
+                InfoWindow.closeAllInfoWindowsOn(map)
+                scheduleRefresh(0)
+            }
+            .setNeutralButton(R.string.tri_remove_all) { _, _ ->
+                triResults.clear()
+                bubble.openKey = null
+                InfoWindow.closeAllInfoWindowsOn(map)
+                scheduleRefresh(0)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun triRows(r: Triangulate.Result): List<String> = buildList {

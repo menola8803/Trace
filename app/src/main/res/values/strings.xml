@@ -271,7 +271,7 @@
     <!-- Nollställ -->
     <string name="reset_section">NOLLSTÄLL</string>
     <string name="reset_marks">Rensa markeringar</string>
-    <string name="reset_marks_desc">Tar bort alla ! och ? på kartan, händelselistan och varningarna i notislistan. Mätningarna finns kvar.</string>
+    <string name="reset_marks_desc">Tar bort alla ! och ? och beräknade master på kartan, händelselistan och varningarna i notislistan. Mätningarna finns kvar.</string>
     <string name="reset_marks_confirm">Alla markeringar, händelser och varningar tas bort. Mätningarna och dina master finns kvar.</string>
     <string name="reset_marks_done">Markeringarna är borttagna.</string>
     <string name="reset_all">Radera alla inspelningar</string>
@@ -356,6 +356,11 @@
     <string name="tri_failed">Beräkningen misslyckades: %1$s</string>
     <string name="tri_done">Masten beräknad: %1$s, ±%2$d m. Tryck på den för detaljer.</string>
     <string name="tri_done_few">Bara %1$d plats med mätningar. Gå runt masten med inspelningen på och beräkna igen.</string>
+
+    <string name="tri_tap_again">Tryck på masten igen för att ta bort den.</string>
+    <string name="tri_remove_title">Ta bort beräknad mast?</string>
+    <string name="tri_remove_msg">Masten, cirkeln, ringarna och pilarna tas bort från kartan. Mätningarna finns kvar.</string>
+    <string name="tri_remove_all">Ta bort alla</string>
 
     <!-- Händelseknappen -->
     <string name="events_button">Händelser</string>

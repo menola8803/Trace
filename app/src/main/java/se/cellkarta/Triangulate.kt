@@ -249,3 +249,9 @@ object Triangulate {
 
     fun round(m: Double): Int = if (m < 100) ((m / 5).roundToInt() * 5) else ((m / 10).roundToInt() * 10)
 }
+
+/** Beräknade master medan appen är igång, per mast ("LTE:240:7:331321"). */
+object TriStore {
+    val results = LinkedHashMap<String, Triangulate.Result>()
+}
+

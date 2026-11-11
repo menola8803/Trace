@@ -254,7 +254,7 @@
 
     <string name="reset_section">RESET</string>
     <string name="reset_marks">Clear markings</string>
-    <string name="reset_marks_desc">Removes all ! and ? on the map, the event list and the alerts in the notification shade. Measurements are kept.</string>
+    <string name="reset_marks_desc">Removes all ! and ?, calculated masts on the map, the event list and the alerts in the notification shade. Measurements are kept.</string>
     <string name="reset_marks_confirm">All markings, events and alerts will be removed. Measurements and your masts are kept.</string>
     <string name="reset_marks_done">The markings are removed.</string>
     <string name="reset_all">Delete all recordings</string>
@@ -336,6 +336,11 @@
     <string name="tri_failed">The calculation failed: %1$s</string>
     <string name="tri_done">Mast located: %1$s, ±%2$d m. Tap it for details.</string>
     <string name="tri_done_few">Only %1$d place with measurements. Walk around the mast while recording and locate again.</string>
+
+    <string name="tri_tap_again">Tap the mast again to remove it.</string>
+    <string name="tri_remove_title">Remove calculated mast?</string>
+    <string name="tri_remove_msg">The mast, circle, rings and arrows are removed from the map. The measurements are kept.</string>
+    <string name="tri_remove_all">Remove all</string>
 
     <string name="events_button">Events</string>
     <string name="events_title">Events</string>

@@ -148,11 +148,13 @@ class SettingsActivity : BaseActivity() {
         findViewById<View>(R.id.btnClearMarks).setOnClickListener {
             confirmReset(R.string.reset_marks, R.string.reset_marks_confirm, R.string.reset_marks_done) {
                 CellDb.get(this).clearFlags()
+                TriStore.results.clear()
             }
         }
         findViewById<View>(R.id.btnClearAll).setOnClickListener {
             confirmReset(R.string.reset_all, R.string.reset_all_confirm, R.string.reset_all_done) {
                 CellDb.get(this).clearRecordings()
+                TriStore.results.clear()
             }
         }
 
