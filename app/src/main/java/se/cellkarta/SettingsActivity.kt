@@ -92,14 +92,19 @@ class SettingsActivity : BaseActivity() {
         val triOptions = listOf(
             Prefs.TRI_OFF to getString(R.string.tri_off),
             Prefs.TRI_ON_DEMAND to getString(R.string.tri_on_demand),
-            1 to tr(R.string.tri_min, 1), 5 to tr(R.string.tri_min, 5), 15 to tr(R.string.tri_min, 15),
+            Prefs.TRI_AUTO to getString(R.string.tri_auto),
         )
         val triStatus = findViewById<TextView>(R.id.triStatus)
         fun showTri(mode: Int) {
             triStatus.text = when (mode) {
                 Prefs.TRI_OFF -> getString(R.string.tri_status_off)
                 Prefs.TRI_ON_DEMAND -> getString(R.string.tri_status_demand)
-                else -> tr(R.string.tri_status_interval, mode)
+                else -> getString(R.string.tri_status_auto)
+            }
+            // Antal hittade master
+            lifecycleScope.launch {
+                val n = withContext(kotlinx.coroutines.Dispatchers.IO) { CellDb.get(this@SettingsActivity).foundCount() }
+                if (mode != Prefs.TRI_OFF) triStatus.append("  " + tr(R.string.tri_found_count, n))
             }
         }
         findViewById<android.widget.FrameLayout>(R.id.triSeg).addView(Ui.Segmented(this).apply {
@@ -169,13 +174,12 @@ class SettingsActivity : BaseActivity() {
         findViewById<View>(R.id.btnClearMarks).setOnClickListener {
             confirmReset(R.string.reset_marks, R.string.reset_marks_confirm, R.string.reset_marks_done) {
                 CellDb.get(this).clearFlags()
-                TriStore.clear()
+                CellDb.get(this).clearFound()
             }
         }
         findViewById<View>(R.id.btnClearAll).setOnClickListener {
             confirmReset(R.string.reset_all, R.string.reset_all_confirm, R.string.reset_all_done) {
                 CellDb.get(this).clearRecordings()
-                TriStore.clear()
             }
         }
 

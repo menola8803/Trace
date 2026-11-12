@@ -29,6 +29,8 @@ object Prefs {
     /** Triangulering: av, vid behov eller med fast intervall i minuter. */
     const val TRI_OFF = 0
     const val TRI_ON_DEMAND = -1
+    /** Hittar masterna själv medan du spelar in och placerar ut dem på kartan. */
+    const val TRI_AUTO = -2
     private const val KEY_LAST_UPDATE_CHECK = "last_update_check"
 
     private fun sp(ctx: Context) = ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
@@ -76,7 +78,7 @@ object Prefs {
     fun setTheme(ctx: Context, name: String) = sp(ctx).edit { putString(KEY_THEME, name) }
 
     /** TRI_OFF, TRI_ON_DEMAND eller antal minuter mellan beräkningarna. Av från början. */
-    fun triMode(ctx: Context): Int = sp(ctx).getInt(KEY_TRI_MODE, TRI_OFF)
+    fun triMode(ctx: Context): Int = sp(ctx).getInt(KEY_TRI_MODE, TRI_OFF).let { if (it > 0) TRI_AUTO else it }
 
     fun setTriMode(ctx: Context, mode: Int) = sp(ctx).edit { putInt(KEY_TRI_MODE, mode) }
 

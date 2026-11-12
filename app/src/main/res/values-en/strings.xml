@@ -297,6 +297,9 @@
     <string name="tri_off">Off</string>
     <string name="tri_on_demand">On demand</string>
     <string name="tri_min">%1$d min</string>
+    <string name="tri_auto">Auto</string>
+    <string name="tri_status_auto">Finds the masts by itself while you record and places them on the map. Recalculated every other minute when new measurements arrive, and saved.</string>
+    <string name="tri_found_count">%1$d masts found.</string>
     <string name="tri_status_off">Off. No calculation is made.</string>
     <string name="tri_status_demand">Tap Locate mast in a cell\'s box on the map.</string>
     <string name="tri_status_interval">Recalculated every %1$d minutes while you record.</string>
@@ -331,7 +334,7 @@
     <string name="tri_note">Estimate from your measurements. Signals bounce off buildings, so the real location may differ.</string>
     <string name="tri_ring">Distance from Timing Advance</string>
     <string name="tri_ring_value">%1$d m from this point</string>
-    <string name="legend_tri">Calculated</string>
+    <string name="legend_tri">Found mast</string>
 
     <string name="tri_failed">The calculation failed: %1$s</string>
     <string name="tri_done">Mast located: %1$s, ±%2$d m. Tap it for details.</string>
@@ -360,6 +363,8 @@
     <string name="traffic_access_title">Usage access needed</string>
     <string name="traffic_access_text">Android only shows data per app to apps with usage access. Turn it on for Trace in the list that opens, then come back here.</string>
     <string name="traffic_access_button">Allow usage access</string>
+    <string name="traffic_access_restricted">If the switch is grey and says Controlled by restricted setting: go to Settings → Apps → Trace, tap ⋮ at the top right and choose Allow restricted settings. If the phone is rooted, Trace grants itself access when you tap the button.</string>
+    <string name="traffic_access_root">Usage access granted with root.</string>
     <string name="traffic_today">Today</string>
     <string name="traffic_7d">7 days</string>
     <string name="traffic_30d">30 days</string>

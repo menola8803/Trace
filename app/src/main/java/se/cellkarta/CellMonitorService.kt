@@ -33,6 +33,8 @@ class CellMonitorService : Service(), LocationListener {
         const val MAX_LOCATION_AGE_MS = 60_000L
         private const val TAG = "Cellkarta"
         private const val ACTION_TA = "se.cellkarta.TA_CHANGED"
+        private const val FIND_INTERVAL_MS = 120_000L
+        private const val FIND_MAX_SITES = 12
 
         /** Timing Advance slogs på eller av i inställningarna: gäller direkt om inspelningen pågår. */
         fun refreshTimingAdvance(ctx: android.content.Context) {
@@ -57,8 +59,51 @@ class CellMonitorService : Service(), LocationListener {
     private val tick = object : Runnable {
         override fun run() {
             scan()
+            findMasts()
             handler.postDelayed(this, INTERVAL_MS)
         }
+    }
+
+    // ---- Hitta master ----
+
+    /** Beräkningarna tar tid, därför en egen tråd, så att mätningarna inte väntar. */
+    private val finder = Executors.newSingleThreadExecutor()
+    private val finding = java.util.concurrent.atomic.AtomicBoolean(false)
+    private var lastFindAt = 0L
+    private var findSince = 0L
+    /** Master som väntar på beräkning. Används bara i beräkningstråden. */
+    private val pending = LinkedHashSet<String>()
+
+    /**
+     * Med Triangulering på Auto: räkna om masterna vars celler har fått nya mätningar,
+     * och placera ut dem som räcker till en position (minst tre platser).
+     */
+    private fun findMasts() {
+        if (Prefs.triMode(this) != Prefs.TRI_AUTO) return
+        val now = System.currentTimeMillis()
+        if (now - lastFindAt < FIND_INTERVAL_MS || !finding.compareAndSet(false, true)) return
+        lastFindAt = now
+        val since = findSince
+        runCatching {
+            finder.execute {
+                try {
+                    val db = CellDb.get(this)
+                    // Nya master först i kön. Hinns inte alla med tas resten nästa gång.
+                    db.cellKeysSince(since).mapNotNull { Triangulate.siteKeyOf(it) }.forEach { pending.add(it) }
+                    val batch = pending.take(FIND_MAX_SITES)
+                    pending.removeAll(batch.toSet())
+                    val placed = Triangulate.forSites(db, batch)
+                        .filter { it.quality != Triangulate.Quality.INSUFFICIENT }
+                    placed.forEach { db.saveFound(it) }
+                    findSince = now
+                    if (placed.isNotEmpty()) LiveStatus.bump()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Masterna kunde inte beräknas", e)
+                } finally {
+                    finding.set(false)
+                }
+            }
+        }.onFailure { finding.set(false) }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -113,6 +158,7 @@ class CellMonitorService : Service(), LocationListener {
         stopDisplayInfo()
         taKeeper.stop()
         worker.shutdown()
+        finder.shutdown()
         started = false
         LiveStatus.setRunning(false)
         super.onDestroy()

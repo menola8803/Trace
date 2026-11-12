@@ -99,6 +99,7 @@ class MainActivity : BaseActivity() {
         val events: List<FlagRow>,
         val masts: List<Pair<UserMast, MastGuess>>,
         val mastInfo: Map<String, MastInfo>,
+        val found: List<Triangulate.Result>,
         val counts: Counts,
     )
 
@@ -230,7 +231,6 @@ class MainActivity : BaseActivity() {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { LiveStatus.state.collect { renderStatus(it) } }
                 launch { LiveStatus.dataVersion.collect { scheduleRefresh(0) } }
-                launch { triTicker() }
             }
         }
     }
@@ -848,8 +848,11 @@ class MainActivity : BaseActivity() {
                 .mapNotNull { k -> MastInfo.of(db, k)?.let { k to it } }
                 .toMap()
 
+        // Hittade master: sparade, så de finns kvar när appen startas om
+        val found = if (Prefs.triMode(this) == Prefs.TRI_OFF) emptyList() else db.foundInBox(s, w, n, e)
+
         return MapData(
-            clusters, known, own, anomalies, tracks, events, masts, mastInfo,
+            clusters, known, own, anomalies, tracks, events, masts, mastInfo, found,
             Counts(db.knownCount(), db.seenCount(), anomalies.size, events.size)
         )
     }
@@ -872,7 +875,7 @@ class MainActivity : BaseActivity() {
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
         // Beräknade master: osäkerhetscirkel, avståndsringar, sektorpilar och masten
-        if (Prefs.triMode(this) != Prefs.TRI_OFF) TriStore.all().forEach { addTriangulation(it) }
+        d.found.forEach { addTriangulation(it, showRings = keepOpen == "tri:${it.siteKey}") }
         d.masts.forEach { (m, g) -> overlays.add(mastMarker(m, g)) }
         d.tracks.forEach { (key, points) -> addTrack(key, points) }
         // Frågetecken där det hände, sedan utropstecken på antennerna överst.
@@ -913,31 +916,10 @@ class MainActivity : BaseActivity() {
                 if (r.places < 3) tr(R.string.tri_done_few, r.places)
                 else tr(R.string.tri_done, qualityLabel(r.quality), Triangulate.round(r.radiusM))
             )
-            TriStore.put(r)
+            withContext(Dispatchers.IO) { db.saveFound(r) }
             bubble.openKey = "tri:$siteKey"
             map.controller.animateTo(GeoPoint(r.lat, r.lon))
             scheduleRefresh(0)
-        }
-    }
-
-    /** Med fast intervall: beräkna om masterna för cellerna i bilden medan du spelar in. */
-    private suspend fun triTicker() {
-        while (true) {
-            delay(30_000L)
-            val mode = Prefs.triMode(this)
-            if (mode <= 0 || !LiveStatus.state.value.running || replay.active) continue
-            if (System.currentTimeMillis() - lastTriAt < mode * 60_000L) continue
-            lastTriAt = System.currentTimeMillis()
-            val box = map.boundingBox
-            val results = withContext(Dispatchers.Default) {
-                runCatching {
-                    db.seenInBox(box.latSouth, box.lonWest, box.latNorth, box.lonEast, 2000)
-                        .mapNotNull { Triangulate.siteKeyOf(it.key) }.distinct().take(8)
-                        .mapNotNull { Triangulate.forSite(db, it) }
-                }.getOrDefault(emptyList())
-            }
-            results.forEach { TriStore.put(it) }
-            if (results.isNotEmpty()) scheduleRefresh(0)
         }
     }
 
@@ -948,7 +930,8 @@ class MainActivity : BaseActivity() {
         Triangulate.Quality.SECURE -> R.string.q_secure
     })
 
-    private fun addTriangulation(r: Triangulate.Result) {
+    /** En hittad mast. Avståndsringarna ritas bara när mastens ruta är öppen, annars blir kartan full. */
+    private fun addTriangulation(r: Triangulate.Result, showRings: Boolean) {
         val center = GeoPoint(r.lat, r.lon)
         val gold = ContextCompat.getColor(this, R.color.gold)
         val tri = MapMarks.COLOR_TRI
@@ -966,7 +949,7 @@ class MainActivity : BaseActivity() {
         })
 
         // Avståndsringar från Timing Advance, runt mätpunkterna
-        r.rings.forEach { ring ->
+        if (showRings) r.rings.forEach { ring ->
             map.overlays.add(Polygon(map).apply {
                 points = Polygon.pointsAsCircle(GeoPoint(ring.lat, ring.lon), ring.radiusM)
                 fillPaint.color = Color.TRANSPARENT
@@ -1041,7 +1024,11 @@ class MainActivity : BaseActivity() {
             // Tryck en gång: rutan. Tryck igen: fråga om den ska tas bort.
             setOnMarkerClickListener { marker, _ ->
                 if (bubble.isOpen && bubble.openKey == marker.relatedObject) confirmRemoveTri(r.siteKey)
-                else marker.showInfoWindow()
+                else {
+                    marker.showInfoWindow()
+                    // Rita om med mastens avståndsringar
+                    scheduleRefresh(0)
+                }
                 true
             }
         })
@@ -1052,13 +1039,13 @@ class MainActivity : BaseActivity() {
             .setTitle(R.string.tri_remove_title)
             .setMessage(R.string.tri_remove_msg)
             .setPositiveButton(R.string.remove) { _, _ ->
-                TriStore.remove(siteKey)
+                lifecycleScope.launch(Dispatchers.IO) { db.deleteFound(siteKey); LiveStatus.bump() }
                 bubble.openKey = null
                 InfoWindow.closeAllInfoWindowsOn(map)
                 scheduleRefresh(0)
             }
             .setNeutralButton(R.string.tri_remove_all) { _, _ ->
-                TriStore.clear()
+                lifecycleScope.launch(Dispatchers.IO) { db.clearFound(); LiveStatus.bump() }
                 bubble.openKey = null
                 InfoWindow.closeAllInfoWindowsOn(map)
                 scheduleRefresh(0)

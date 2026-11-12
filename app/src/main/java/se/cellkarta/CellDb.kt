@@ -107,7 +107,7 @@ data class KnownCell(val key: String, val lat: Double, val lon: Double)
  *  flags        avvikelser: ny cell, cell som flyttar sig, nedgradering
  */
 class CellDb private constructor(ctx: Context) :
-    SQLiteOpenHelper(ctx, "cellkarta.db", null, 4) {
+    SQLiteOpenHelper(ctx, "cellkarta.db", null, 5) {
 
     companion object {
         const val FLAG_NEW = "NEW"
@@ -156,6 +156,18 @@ class CellDb private constructor(ctx: Context) :
         )
         db.execSQL("CREATE INDEX idx_flags_type ON flags(type, cell_key)")
         createMasts(db)
+        createFound(db)
+    }
+
+    /** Master som trianguleringen har hittat och placerat ut. */
+    private fun createFound(db: SQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS found_masts(site_key TEXT PRIMARY KEY, radio TEXT NOT NULL, operator TEXT NOT NULL, " +
+                "site INTEGER NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, radius REAL NOT NULL, quality INTEGER NOT NULL, " +
+                "places INTEGER NOT NULL, points INTEGER NOT NULL, ta_points INTEGER NOT NULL, advice INTEGER, ocid_dist REAL, " +
+                "alt_lat REAL, alt_lon REAL, sectors TEXT, rings TEXT, ts INTEGER NOT NULL)"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_found_lat_lon ON found_masts(lat, lon)")
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -163,6 +175,7 @@ class CellDb private constructor(ctx: Context) :
         if (oldVersion < 2) db.execSQL("CREATE INDEX IF NOT EXISTS idx_obs_ts ON obs(ts)")
         if (oldVersion < 3) createMasts(db)
         if (oldVersion < 4) db.execSQL("ALTER TABLE obs ADD COLUMN ta_m REAL")
+        if (oldVersion < 5) createFound(db)
     }
 
     /** Master som användaren själv har markerat på kartan. */
@@ -447,12 +460,81 @@ class CellDb private constructor(ctx: Context) :
         writableDatabase.delete("flags", null, null)
     }
 
+    // ---- Hittade master ----
+
+    fun saveFound(r: Triangulate.Result) {
+        writableDatabase.insertWithOnConflict("found_masts", null, ContentValues().apply {
+            put("site_key", r.siteKey); put("radio", r.radio); put("operator", r.operator); put("site", r.site)
+            put("lat", r.lat); put("lon", r.lon); put("radius", r.radiusM); put("quality", r.quality.ordinal)
+            put("places", r.places); put("points", r.points); put("ta_points", r.taPoints)
+            if (r.adviceOctant != null) put("advice", r.adviceOctant) else putNull("advice")
+            if (r.ocidDistM != null) put("ocid_dist", r.ocidDistM) else putNull("ocid_dist")
+            if (r.altLat != null && r.altLon != null) { put("alt_lat", r.altLat); put("alt_lon", r.altLon) }
+            else { putNull("alt_lat"); putNull("alt_lon") }
+            put("sectors", r.sectors.joinToString(";") { "${it.key}|${it.sector ?: ""}|${num(it.bearingDeg)}" })
+            put("rings", r.rings.joinToString(";") { "${num(it.lat)}|${num(it.lon)}|${num(it.radiusM)}" })
+            put("ts", r.ts)
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    /** Hittade master i området, även en bit utanför så att cirklarna syns vid kanten. */
+    fun foundInBox(s: Double, w: Double, n: Double, e: Double): List<Triangulate.Result> {
+        val mLat = (n - s) * 0.25; val mLon = (e - w) * 0.25
+        return readFound("WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ? ORDER BY ts DESC LIMIT 300",
+            arrayOf((s - mLat).toString(), (n + mLat).toString(), (w - mLon).toString(), (e + mLon).toString()))
+    }
+
+    fun found(siteKey: String): Triangulate.Result? = readFound("WHERE site_key=?", arrayOf(siteKey)).firstOrNull()
+
+    fun foundCount(): Long = DatabaseUtils.queryNumEntries(readableDatabase, "found_masts")
+
+    fun deleteFound(siteKey: String) {
+        writableDatabase.delete("found_masts", "site_key=?", arrayOf(siteKey))
+    }
+
+    fun clearFound() {
+        writableDatabase.delete("found_masts", null, null)
+    }
+
+    /** Masterna vars celler har nya mätningar sedan tidpunkten. */
+    fun cellKeysSince(since: Long): List<String> =
+        readableDatabase.rawQuery("SELECT DISTINCT cell_key FROM obs WHERE ts >= ?", arrayOf(since.toString())).use { c ->
+            buildList { while (c.moveToNext()) add(c.getString(0)) }
+        }
+
+    private fun readFound(where: String, args: Array<String>): List<Triangulate.Result> =
+        readableDatabase.rawQuery(
+            "SELECT site_key, radio, operator, site, lat, lon, radius, quality, places, points, ta_points, advice, ocid_dist, " +
+                "alt_lat, alt_lon, sectors, rings, ts FROM found_masts $where", args
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    val sectors = c.getString(15).orEmpty().split(';').filter { it.isNotEmpty() }.mapNotNull { s ->
+                        val p = s.split('|'); if (p.size != 3) null
+                        else Triangulate.Sector(p[0], p[1].toLongOrNull(), p[2].toDoubleOrNull() ?: return@mapNotNull null)
+                    }
+                    val rings = c.getString(16).orEmpty().split(';').filter { it.isNotEmpty() }.mapNotNull { s ->
+                        val p = s.split('|').map { it.toDoubleOrNull() }
+                        if (p.size != 3 || p.any { it == null }) null else Triangulate.Ring(p[0]!!, p[1]!!, p[2]!!)
+                    }
+                    add(Triangulate.Result(
+                        c.getString(0), c.getString(1), c.getString(2), c.getLong(3), c.getDouble(4), c.getDouble(5),
+                        c.getDouble(6), Triangulate.Quality.entries.getOrElse(c.getInt(7)) { Triangulate.Quality.ROUGH },
+                        c.getInt(8), c.getInt(9), c.getInt(10), sectors,
+                        if (c.isNull(11)) null else c.getInt(11), rings,
+                        if (c.isNull(12)) null else c.getDouble(12), c.getLong(17),
+                        if (c.isNull(13)) null else c.getDouble(13), if (c.isNull(14)) null else c.getDouble(14),
+                    ))
+                }
+            }
+        }
+
     /** Tar bort allt du har spelat in: mätningar, celler, händelser och markerade master. */
     fun clearRecordings() {
         val db = writableDatabase
         db.beginTransaction()
         try {
-            listOf("obs", "seen", "flags", "masts").forEach { db.delete(it, null, null) }
+            listOf("obs", "seen", "flags", "masts", "found_masts").forEach { db.delete(it, null, null) }
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()

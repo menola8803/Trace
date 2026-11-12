@@ -132,10 +132,24 @@ class AppTrafficActivity : BaseActivity() {
             list.addView(card().apply {
                 addView(text(getString(R.string.traffic_access_title), R.color.ink, 15f, bold = true))
                 addView(text(getString(R.string.traffic_access_text), R.color.muted, 13f).apply { setPadding(0, (4 * d).toInt(), 0, 0) })
+                addView(text(getString(R.string.traffic_access_restricted), R.color.dim, 12f).apply { setPadding(0, (6 * d).toInt(), 0, 0) })
                 addView(Button(this@AppTrafficActivity, null, 0, R.style.Trace_Button_Primary).apply {
                     text = getString(R.string.traffic_access_button)
                     layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (12 * d).toInt() }
-                    setOnClickListener { AppTraffic.openAccessSettings(this@AppTrafficActivity) }
+                    setOnClickListener {
+                        // Först med root, om telefonen har det. Annars systemets inställningar.
+                        isEnabled = false
+                        lifecycleScope.launch {
+                            val granted = withContext(Dispatchers.IO) { AppTraffic.grantWithRoot(this@AppTrafficActivity) }
+                            if (granted) {
+                                Toast.makeText(this@AppTrafficActivity, R.string.traffic_access_root, Toast.LENGTH_SHORT).show()
+                                render()
+                            } else {
+                                isEnabled = true
+                                AppTraffic.openAccessSettings(this@AppTrafficActivity)
+                            }
+                        }
+                    }
                 })
             })
         }

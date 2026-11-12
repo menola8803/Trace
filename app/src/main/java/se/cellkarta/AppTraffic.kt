@@ -39,6 +39,21 @@ object AppTraffic {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
+    /**
+     * Med root: ger Trace användningsåtkomst direkt, utan systemets inställningar. Fungerar även när
+     * Android spärrar inställningen för appar som inte kommer från Play Butik. Körs i bakgrunden.
+     */
+    fun grantWithRoot(ctx: Context): Boolean {
+        val ok = runCatching {
+            val p = ProcessBuilder("su", "-c", "appops set ${ctx.packageName} GET_USAGE_STATS allow")
+                .redirectErrorStream(true).start()
+            p.outputStream.close()
+            p.inputStream.bufferedReader().readText()
+            if (!p.waitFor(15, java.util.concurrent.TimeUnit.SECONDS)) { p.destroy(); false } else p.exitValue() == 0
+        }.getOrDefault(false)
+        return ok && hasAccess(ctx)
+    }
+
     fun openAccessSettings(ctx: Context) {
         val withPkg = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:${ctx.packageName}"))
         runCatching { ctx.startActivity(withPkg) }

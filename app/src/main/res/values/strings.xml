@@ -317,6 +317,9 @@
     <string name="tri_off">Av</string>
     <string name="tri_on_demand">Vid behov</string>
     <string name="tri_min">%1$d min</string>
+    <string name="tri_auto">Auto</string>
+    <string name="tri_status_auto">Hittar masterna själv medan du spelar in och placerar ut dem på kartan. Räknas om varannan minut när det kommer nya mätningar, och sparas.</string>
+    <string name="tri_found_count">%1$d master hittade.</string>
     <string name="tri_status_off">Av. Ingen beräkning görs.</string>
     <string name="tri_status_demand">Tryck Beräkna mast i en cells ruta på kartan.</string>
     <string name="tri_status_interval">Beräknas om var %1$d:e minut medan du spelar in.</string>
@@ -351,7 +354,7 @@
     <string name="tri_note">Uppskattning från dina mätningar. Signaler studsar mot hus, så den verkliga platsen kan avvika.</string>
     <string name="tri_ring">Avstånd enligt Timing Advance</string>
     <string name="tri_ring_value">%1$d m från den här punkten</string>
-    <string name="legend_tri">Beräknad</string>
+    <string name="legend_tri">Hittad mast</string>
 
     <string name="tri_failed">Beräkningen misslyckades: %1$s</string>
     <string name="tri_done">Masten beräknad: %1$s, ±%2$d m. Tryck på den för detaljer.</string>
@@ -380,6 +383,8 @@
     <string name="traffic_access_title">Användningsåtkomst behövs</string>
     <string name="traffic_access_text">Android visar bara data per app för appar som har användningsåtkomst. Slå på den för Trace i listan som öppnas och gå sedan tillbaka hit.</string>
     <string name="traffic_access_button">Ge användningsåtkomst</string>
+    <string name="traffic_access_restricted">Är reglaget grått med texten Styrs av spärrad inställning: gå till Inställningar → Appar → Trace, tryck ⋮ uppe till höger och välj Tillåt begränsade inställningar. Har telefonen root ger Trace sig själv åtkomst när du trycker på knappen.</string>
+    <string name="traffic_access_root">Användningsåtkomst given med root.</string>
     <string name="traffic_today">Idag</string>
     <string name="traffic_7d">7 dagar</string>
     <string name="traffic_30d">30 dagar</string>

@@ -123,6 +123,28 @@ object Triangulate {
         return solve(siteKey, p[0], Operators.name(mcc, mnc), site, obs, known)
     }
 
+    /**
+     * Beräknar flera master på en gång. Mätningarna läses en gång per operatör och nät,
+     * i stället för en gång per mast.
+     */
+    fun forSites(db: CellDb, siteKeys: Collection<String>): List<Result> =
+        siteKeys.groupBy { it.substringBeforeLast(':') }.flatMap { (prefix, keys) ->
+            val p = prefix.split(':')
+            val mcc = p.getOrNull(1)?.toIntOrNull() ?: return@flatMap emptyList()
+            val mnc = p.getOrNull(2)?.toIntOrNull() ?: return@flatMap emptyList()
+            val bySite = db.triObservations("$prefix:", CellMonitorService.MAX_ACCURACY_M.toDouble()).groupBy { siteOf(it.key) }
+            keys.mapNotNull { key ->
+                val site = key.substringAfterLast(':').toLongOrNull() ?: return@mapNotNull null
+                val obs = bySite[site].orEmpty()
+                if (obs.isEmpty()) return@mapNotNull null
+                val known = when (p[0]) {
+                    "LTE", "NR" -> MastLookup.siteCells(db, p[0], mcc, mnc, site)
+                    else -> obs.map { it.key }.distinct().mapNotNull { k -> db.knownPos(k)?.let { KnownCell(k, it.first, it.second) } }
+                }
+                runCatching { solve(key, p[0], Operators.name(mcc, mnc), site, obs, known) }.getOrNull()
+            }
+        }
+
     /** Begränsar hur mycket en mätning som inte stämmer alls kan påverka (Cauchy). */
     private fun robust(e2: Double, c: Double): Double = c * c * ln(1.0 + e2 / (c * c))
 
@@ -350,17 +372,4 @@ object Triangulate {
         ctx.resources.getStringArray(R.array.compass)[((((deg % 360) + 360) % 360 + 22.5) / 45).toInt() % 8]
 
     fun round(m: Double): Int = if (m < 100) ((m / 5).roundToInt() * 5) else ((m / 10).roundToInt() * 10)
-}
-
-/**
- * Beräknade master medan appen är igång, per mast ("LTE:240:7:331321").
- * Läses och ändras från flera trådar, därför synkroniserat.
- */
-object TriStore {
-    private val results = LinkedHashMap<String, Triangulate.Result>()
-
-    @Synchronized fun put(r: Triangulate.Result) { results[r.siteKey] = r }
-    @Synchronized fun remove(siteKey: String) { results.remove(siteKey) }
-    @Synchronized fun clear() = results.clear()
-    @Synchronized fun all(): List<Triangulate.Result> = results.values.toList()
 }
