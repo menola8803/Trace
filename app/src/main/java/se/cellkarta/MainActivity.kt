@@ -592,6 +592,9 @@ class MainActivity : BaseActivity() {
             counts.seen == 0L -> lines += getString(R.string.hint_waiting)
             counts.known == 0L -> lines += getString(R.string.hint_download)
         }
+        // Felsökning medan inspelningen pågår: hur många avläsningar som faktiskt sparas
+        if (st.running) lines += tr(R.string.status_diag, st.asked, st.answered, st.saved) +
+            (st.problem?.let { " · $it" } ?: "")
         status.text = lines.joinToString("\n")
     }
 

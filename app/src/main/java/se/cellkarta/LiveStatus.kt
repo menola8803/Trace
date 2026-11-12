@@ -14,6 +14,11 @@ object LiveStatus {
         val note: String? = null,
         /** Det telefonen visar i statusraden, till exempel "5G (via 4G)". */
         val display: String? = null,
+        /** Felsökning: avläsningar som begärts, svar som kommit, avläsningar som sparats och senaste problemet. */
+        val asked: Int = 0,
+        val answered: Int = 0,
+        val saved: Int = 0,
+        val problem: String? = null,
     )
 
     val state = MutableStateFlow(State())
@@ -36,4 +41,9 @@ object LiveStatus {
     fun display(text: String?) = state.update { it.copy(display = text) }
 
     fun bump() = dataVersion.update { it + 1 }
+
+    fun asked() = state.update { it.copy(asked = it.asked + 1) }
+    fun answered() = state.update { it.copy(answered = it.answered + 1) }
+    fun saved() = state.update { it.copy(saved = it.saved + 1) }
+    fun problem(text: String) = state.update { it.copy(problem = text) }
 }

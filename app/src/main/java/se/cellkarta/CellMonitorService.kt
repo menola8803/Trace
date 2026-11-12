@@ -101,7 +101,7 @@ class CellMonitorService : Service(), LocationListener {
                     placed.forEach { db.saveFound(it) }
                     findSince = now
                     if (placed.isNotEmpty()) LiveStatus.bump()
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.w(TAG, "Masterna kunde inte beräknas", e)
                 } finally {
                     finding.set(false)
@@ -194,40 +194,62 @@ class CellMonitorService : Service(), LocationListener {
 
     @SuppressLint("MissingPermission")
     private fun scan() {
-        if (!hasLocationPermission()) return
+        if (!hasLocationPermission()) {
+            LiveStatus.problem("no location permission")
+            return
+        }
+        LiveStatus.asked()
         try {
             tm.requestCellInfoUpdate(safeWorker, object : TelephonyManager.CellInfoCallback() {
                 override fun onCellInfo(cellInfo: MutableList<CellInfo>) = handle(cellInfo)
-                override fun onError(errorCode: Int, detail: Throwable?) = handle(null)
+                override fun onError(errorCode: Int, detail: Throwable?) {
+                    LiveStatus.problem("cell info error $errorCode")
+                    handle(null)
+                }
             })
         } catch (e: SecurityException) {
+            LiveStatus.problem("SecurityException")
             LiveStatus.note(getString(R.string.note_no_permission))
+        } catch (e: Exception) {
+            LiveStatus.problem(e.javaClass.simpleName + (e.message?.let { ": $it" } ?: ""))
         }
     }
 
     /** Körs på worker-tråden, så databasarbetet stör inte gränssnittet. */
     @SuppressLint("MissingPermission")
     private fun handle(fresh: List<CellInfo>?) {
+        LiveStatus.answered()
         // Inomhus kommer GPS ofta inte fram. Mätningen sparas ändå, med positionens verkliga
         // osäkerhet, så att inspelningen inte blir tom. Bara exakta positioner används för masterna.
         val loc = freshestLocation()
         if (loc == null) {
+            LiveStatus.problem("no position")
             LiveStatus.note(getString(R.string.note_wait_position))
             return
         }
         val ageS = ((System.currentTimeMillis() - loc.time) / 1000L).coerceAtLeast(0L)
         val acc = loc.accuracy + if (ageS * 1000L > MAX_LOCATION_AGE_MS) (ageS - MAX_LOCATION_AGE_MS / 1000L) * AGE_GROWTH_M_PER_S else 0f
         if (acc > MAX_SAVE_ACCURACY_M) {
+            LiveStatus.problem("position ±${acc.toInt()} m")
             LiveStatus.note(tr(R.string.note_wait_accuracy, acc.toInt()))
             return
         }
         val precise = acc <= MAX_ACCURACY_M
         try {
             val list = fresh ?: tm.allCellInfo ?: emptyList()
-            detector.process(CellReader.parse(list), loc, acc, precise)
+            val cells = CellReader.parse(list)
+            if (cells.isEmpty()) {
+                LiveStatus.problem("no cells (${list.size} raw)")
+                return
+            }
+            detector.process(cells, loc, acc, precise)
+            LiveStatus.saved()
             if (!precise) LiveStatus.note(tr(R.string.note_imprecise, acc.toInt()))
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Även allvarliga fel fångas, så att inspelningen fortsätter och felet syns på skärmen
             Log.w(TAG, "Mätningen misslyckades", e)
+            LiveStatus.problem(e.javaClass.simpleName + (e.message?.let { ": ${it.take(120)}" } ?: "") +
+                (e.stackTrace.firstOrNull { it.className.startsWith("se.cellkarta") }?.let { " @${it.fileName}:${it.lineNumber}" } ?: ""))
         }
     }
 
