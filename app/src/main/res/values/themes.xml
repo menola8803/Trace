@@ -13,6 +13,9 @@
         <item name="android:fontFamily">@font/jakarta</item>
         <item name="android:buttonStyle">@style/Trace.Button</item>
         <item name="android:alertDialogTheme">@style/Trace.Dialog</item>
+        <item name="android:popupMenuStyle">@style/Trace.PopupMenu</item>
+        <item name="android:textAppearanceLargePopupMenu">@style/Trace.PopupMenuText</item>
+        <item name="android:textAppearanceSmallPopupMenu">@style/Trace.PopupMenuText</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@color/card</item>
         <item name="android:windowLightStatusBar">true</item>
@@ -32,6 +35,19 @@
     <style name="Trace.Button.Primary">
         <item name="android:background">@drawable/bg_button_primary</item>
         <item name="android:textColor">@color/on_gold</item>
+    </style>
+
+    <!-- Menyn under Mer: rundad, i temats färger -->
+    <style name="Trace.PopupMenu" parent="android:Widget.Material.PopupMenu">
+        <item name="android:popupBackground">@drawable/bg_popup</item>
+        <item name="android:popupElevation">8dp</item>
+        <item name="android:overlapAnchor">false</item>
+    </style>
+
+    <style name="Trace.PopupMenuText" parent="android:TextAppearance.Material.Widget.PopupMenu.Large">
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:fontFamily">@font/jakarta</item>
+        <item name="android:textSize">16sp</item>
     </style>
 
     <style name="Trace.Dialog" parent="android:Theme.Material.Light.Dialog.Alert">
