@@ -342,6 +342,52 @@
     <string name="tri_remove_msg">The mast, circle, rings and arrows are removed from the map. The measurements are kept.</string>
     <string name="tri_remove_all">Remove all</string>
 
+    <!-- Triangulation: two possible sides -->
+    <string name="tri_alt_title">Or here?</string>
+    <string name="tri_alt_text">The measurements lie almost on a straight line, for example along a road. The distances then fit equally well on both sides of the line, so the mast can be on either side.</string>
+    <string name="tri_alt_row">Side</string>
+    <string name="tri_alt_value">uncertain, the mast may be on the other side of your measurements (dashed)</string>
+    <string name="tri_alt_advice">measure further to the %1$s, away from the line, to settle which side is right</string>
+
+    <!-- App traffic -->
+    <string name="traffic_section">APP TRAFFIC</string>
+    <string name="traffic_title">App traffic</string>
+    <string name="traffic_sub">Data per app and the servers they look up</string>
+    <string name="traffic_enable">Show app traffic</string>
+    <string name="traffic_enable_desc">Shows how much data each app sends and receives over mobile and Wi-Fi, and optionally which servers the apps look up. Off from the start.</string>
+    <string name="traffic_open">Open app traffic</string>
+    <string name="menu_traffic">App traffic</string>
+    <string name="traffic_access_title">Usage access needed</string>
+    <string name="traffic_access_text">Android only shows data per app to apps with usage access. Turn it on for Trace in the list that opens, then come back here.</string>
+    <string name="traffic_access_button">Allow usage access</string>
+    <string name="traffic_today">Today</string>
+    <string name="traffic_7d">7 days</string>
+    <string name="traffic_30d">30 days</string>
+    <string name="traffic_split">Mobile %1$s · Wi-Fi %2$s</string>
+    <string name="traffic_down_up">↓ %1$s  ↑ %2$s</string>
+    <string name="traffic_total">Total mobile %1$s · Wi-Fi %2$s</string>
+    <string name="traffic_none">No data for this period.</string>
+    <string name="traffic_note">Android counts data in blocks of a few hours, so today\'s figures can lag a little.</string>
+    <string name="traffic_servers_n">›  %1$d servers</string>
+    <string name="traffic_servers_hide">‹  Hide servers</string>
+    <string name="traffic_server_line">%1$d lookups · last %2$s</string>
+    <string name="traffic_more_servers">+ %1$d more</string>
+    <string name="traffic_only_lookups">no data counted, only lookups</string>
+    <string name="traffic_unknown_app">Unknown app</string>
+    <string name="traffic_system">Android system</string>
+    <string name="traffic_removed">Uninstalled apps</string>
+    <string name="traffic_tethering">Hotspot and tethering</string>
+    <string name="traffic_dns_title">Log server names</string>
+    <string name="traffic_dns_desc">Starts a local VPN in the phone that only receives name lookups (DNS). Each lookup is passed on unchanged to the network\'s usual DNS server, and the name is saved here together with the app that asked. No other traffic goes through it and nothing is sent anywhere else. Apps that use their own encrypted DNS, such as secure DNS in Chrome, are not seen. Another VPN cannot run at the same time.</string>
+    <string name="traffic_dns_on">On · %1$d lookups saved</string>
+    <string name="traffic_dns_off">Off</string>
+    <string name="traffic_dns_failed">The local VPN could not be started.</string>
+    <string name="traffic_dns_denied">Without VPN approval the server names cannot be logged.</string>
+    <string name="traffic_dns_clear">Clear server log</string>
+    <string name="traffic_dns_cleared">The server log is cleared.</string>
+    <string name="traffic_dns_private">Private DNS is set to %1$s on the phone. App lookups then go encrypted past the log. Choose Automatic under Settings → Network → Private DNS to see them.</string>
+    <string name="traffic_vpn_session">Trace server names</string>
+
     <string name="events_button">Events</string>
     <string name="events_title">Events</string>
     <string name="events_new">%1$d new</string>

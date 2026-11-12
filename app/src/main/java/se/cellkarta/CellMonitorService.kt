@@ -32,6 +32,13 @@ class CellMonitorService : Service(), LocationListener {
         const val MAX_ACCURACY_M = 100f
         const val MAX_LOCATION_AGE_MS = 60_000L
         private const val TAG = "Cellkarta"
+        private const val ACTION_TA = "se.cellkarta.TA_CHANGED"
+
+        /** Timing Advance slogs på eller av i inställningarna: gäller direkt om inspelningen pågår. */
+        fun refreshTimingAdvance(ctx: android.content.Context) {
+            if (!LiveStatus.state.value.running) return
+            runCatching { ctx.startService(Intent(ctx, CellMonitorService::class.java).setAction(ACTION_TA)) }
+        }
     }
 
     private lateinit var tm: TelephonyManager
@@ -40,6 +47,10 @@ class CellMonitorService : Service(), LocationListener {
     private lateinit var detector: Detector
     private val handler = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
+    /** Svar som kommer efter att tjänsten stoppats kastas, i stället för att krascha. */
+    private val safeWorker = java.util.concurrent.Executor { r ->
+        if (!worker.isShutdown) runCatching { worker.execute(r) }
+    }
     @Volatile private var lastLocation: Location? = null
     private var started = false
 
@@ -69,9 +80,22 @@ class CellMonitorService : Service(), LocationListener {
             stopSelf()
             return START_NOT_STICKY
         }
-        ServiceCompat.startForeground(
-            this, Notifier.ONGOING_ID, notifier.ongoing(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-        )
+        if (intent?.action == ACTION_TA) {
+            if (!started) { stopSelf(); return START_NOT_STICKY }
+            if (Prefs.timingAdvance(this)) taKeeper.start() else taKeeper.stop()
+            return START_STICKY
+        }
+        try {
+            ServiceCompat.startForeground(
+                this, Notifier.ONGOING_ID, notifier.ongoing(), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+            )
+        } catch (e: Exception) {
+            // Android tillåter inte alltid att inspelningen startar i bakgrunden (till exempel efter
+            // att systemet har stängt appen). Då stoppas den i stället för att appen kraschar.
+            Log.w(TAG, "Kunde inte starta inspelningen", e)
+            stopSelf()
+            return START_NOT_STICKY
+        }
         if (!started) {
             started = true
             startLocationUpdates()
@@ -118,7 +142,7 @@ class CellMonitorService : Service(), LocationListener {
     private fun scan() {
         if (!hasLocationPermission()) return
         try {
-            tm.requestCellInfoUpdate(worker, object : TelephonyManager.CellInfoCallback() {
+            tm.requestCellInfoUpdate(safeWorker, object : TelephonyManager.CellInfoCallback() {
                 override fun onCellInfo(cellInfo: MutableList<CellInfo>) = handle(cellInfo)
                 override fun onError(errorCode: Int, detail: Throwable?) = handle(null)
             })

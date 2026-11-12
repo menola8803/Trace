@@ -71,6 +71,27 @@
             <TextView style="@style/Trace.Label" android:layout_marginTop="4dp" android:textSize="12sp" android:text="@string/mast_details_desc" />
         </LinearLayout>
 
+        <!-- Apptrafik -->
+        <TextView style="@style/Trace.Section" android:text="@string/traffic_section" />
+        <LinearLayout style="@style/Trace.Card">
+            <Switch
+                android:id="@+id/switchTraffic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:text="@string/traffic_enable"
+                android:textColor="@color/ink"
+                android:textSize="16sp" />
+            <TextView style="@style/Trace.Label" android:layout_marginTop="4dp" android:textSize="12sp" android:text="@string/traffic_enable_desc" />
+            <Button
+                android:id="@+id/btnOpenTraffic"
+                style="@style/Trace.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/traffic_open" />
+        </LinearLayout>
+
         <!-- Schemalagd inspelning -->
         <TextView style="@style/Trace.Section" android:text="@string/sched_section" />
         <LinearLayout style="@style/Trace.Card">

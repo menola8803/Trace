@@ -267,6 +267,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onPause() {
+        replay.pause()
         myLocation.disableMyLocation()
         map.onPause()
         super.onPause()
@@ -470,6 +471,7 @@ class MainActivity : BaseActivity() {
         PopupMenu(this, anchor).apply {
             menu.add(0, 7, 0, R.string.menu_replay)
             menu.add(0, 6, 0, R.string.menu_log)
+            if (Prefs.appTraffic(this@MainActivity)) menu.add(0, 8, 0, R.string.menu_traffic)
             menu.add(0, 5, 1, R.string.settings)
             menu.add(0, 1, 2, R.string.menu_download)
             menu.add(0, 2, 3, if (hasKey) R.string.menu_key_saved else R.string.menu_key)
@@ -478,6 +480,7 @@ class MainActivity : BaseActivity() {
             setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     7 -> chooseReplayDay()
+                    8 -> startActivity(Intent(this@MainActivity, AppTrafficActivity::class.java))
                     6 -> startActivity(Intent(this@MainActivity, LogActivity::class.java))
                     5 -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                     1 -> downloadSweden()
@@ -869,7 +872,7 @@ class MainActivity : BaseActivity() {
         val servingKey = LiveStatus.state.value.servingKey
         d.own.firstOrNull { it.key == servingKey }?.let { overlays.add(servingMarker(it)) }
         // Beräknade master: osäkerhetscirkel, avståndsringar, sektorpilar och masten
-        if (Prefs.triMode(this) != Prefs.TRI_OFF) triResults.values.forEach { addTriangulation(it) }
+        if (Prefs.triMode(this) != Prefs.TRI_OFF) TriStore.all().forEach { addTriangulation(it) }
         d.masts.forEach { (m, g) -> overlays.add(mastMarker(m, g)) }
         d.tracks.forEach { (key, points) -> addTrack(key, points) }
         // Frågetecken där det hände, sedan utropstecken på antennerna överst.
@@ -890,8 +893,6 @@ class MainActivity : BaseActivity() {
     /** Ett tryck bredvid en förklaringsruta, på själva kartan, stänger den. */
     // ---- Triangulering ----
 
-    /** Beräknade master, per mast ("LTE:240:7:331321"). */
-    private val triResults get() = TriStore.results
     private var lastTriAt = 0L
 
     /** "own:KEY", "antenna:KEY" och "serving:KEY" bär en cellnyckel. */
@@ -912,7 +913,7 @@ class MainActivity : BaseActivity() {
                 if (r.places < 3) tr(R.string.tri_done_few, r.places)
                 else tr(R.string.tri_done, qualityLabel(r.quality), Triangulate.round(r.radiusM))
             )
-            triResults[siteKey] = r
+            TriStore.put(r)
             bubble.openKey = "tri:$siteKey"
             map.controller.animateTo(GeoPoint(r.lat, r.lon))
             scheduleRefresh(0)
@@ -935,7 +936,7 @@ class MainActivity : BaseActivity() {
                         .mapNotNull { Triangulate.forSite(db, it) }
                 }.getOrDefault(emptyList())
             }
-            results.forEach { triResults[it.siteKey] = it }
+            results.forEach { TriStore.put(it) }
             if (results.isNotEmpty()) scheduleRefresh(0)
         }
     }
@@ -992,6 +993,42 @@ class MainActivity : BaseActivity() {
             })
         }
 
+        // Andra möjliga platsen: mätningarna ligger nästan på en linje, masten kan stå på andra sidan
+        if (r.altLat != null && r.altLon != null) {
+            val alt = GeoPoint(r.altLat, r.altLon)
+            map.overlays.add(Polyline(map).apply {
+                setPoints(listOf(center, alt))
+                outlinePaint.color = Color.argb(140, Color.red(tri), Color.green(tri), Color.blue(tri))
+                outlinePaint.strokeWidth = 1.5f * density
+                outlinePaint.pathEffect = DashPathEffect(floatArrayOf(4f * density, 6f * density), 0f)
+                setInfoWindow(null)
+            })
+            map.overlays.add(Polygon(map).apply {
+                points = Polygon.pointsAsCircle(alt, r.radiusM)
+                fillPaint.color = Color.TRANSPARENT
+                outlinePaint.color = Color.argb(150, Color.red(tri), Color.green(tri), Color.blue(tri))
+                outlinePaint.strokeWidth = 1.5f * density
+                outlinePaint.pathEffect = DashPathEffect(floatArrayOf(10f * density, 8f * density), 0f)
+                setInfoWindow(null)
+                setOnClickListener { _, _, _ -> false }
+            })
+            map.overlays.add(Marker(map).apply {
+                position = alt
+                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                icon = MapMarks.mastIcon(this@MainActivity, 32f, tri).apply { alpha = 150 }
+                relatedObject = "trialt:${r.siteKey}"
+                title = getString(R.string.tri_alt_title)
+                snippet = listOf(
+                    getString(R.string.tri_alt_text),
+                    "",
+                    Texts.row(getString(R.string.tri_advice),
+                        r.adviceOctant?.let { tr(R.string.tri_alt_advice, resources.getStringArray(R.array.compass)[it]) } ?: ""),
+                    Texts.row(getString(R.string.row_position), String.format(Locale.ROOT, "%.5f, %.5f", r.altLat, r.altLon)),
+                ).joinToString("<br>")
+                setInfoWindow(bubble)
+            })
+        }
+
         // Masten
         map.overlays.add(Marker(map).apply {
             position = center
@@ -1015,13 +1052,13 @@ class MainActivity : BaseActivity() {
             .setTitle(R.string.tri_remove_title)
             .setMessage(R.string.tri_remove_msg)
             .setPositiveButton(R.string.remove) { _, _ ->
-                triResults.remove(siteKey)
+                TriStore.remove(siteKey)
                 bubble.openKey = null
                 InfoWindow.closeAllInfoWindowsOn(map)
                 scheduleRefresh(0)
             }
             .setNeutralButton(R.string.tri_remove_all) { _, _ ->
-                triResults.clear()
+                TriStore.clear()
                 bubble.openKey = null
                 InfoWindow.closeAllInfoWindowsOn(map)
                 scheduleRefresh(0)
@@ -1033,16 +1070,18 @@ class MainActivity : BaseActivity() {
     private fun triRows(r: Triangulate.Result): List<String> = buildList {
         add(Texts.row(getString(R.string.tri_quality), qualityLabel(r.quality)))
         add(Texts.row(getString(R.string.tri_uncertainty), tr(R.string.tri_unc_value, Triangulate.round(r.radiusM))))
+        if (r.ambiguous) add(Texts.row(getString(R.string.tri_alt_row), getString(R.string.tri_alt_value)))
         add(Texts.row(getString(R.string.tri_measurements), tr(R.string.tri_meas_value, r.points, r.places)))
         add(Texts.row(getString(R.string.tri_ta),
             if (r.taPoints > 0) tr(R.string.tri_ta_value, r.taPoints) else getString(R.string.tri_ta_none)))
         if (r.sectors.isNotEmpty()) add(Texts.row(getString(R.string.tri_sectors),
-            r.sectors.joinToString(", ") { tr(R.string.tri_sector_value, "${it.sector ?: "?"}", Triangulate.compass(this@MainActivity, it.bearingDeg)) }))
+            r.sectors.joinToString(", ") { tr(R.string.tri_sector_value, "${it.sector ?: "–"}", Triangulate.compass(this@MainActivity, it.bearingDeg)) }))
         add(Texts.row(getString(R.string.tri_ocid),
             r.ocidDistM?.let { tr(R.string.tri_ocid_value, Triangulate.round(it)) } ?: getString(R.string.tri_ocid_none)))
         add(Texts.row(getString(R.string.tri_advice),
-            r.adviceOctant?.let { tr(R.string.tri_advice_value, resources.getStringArray(R.array.compass)[it]) }
-                ?: getString(R.string.tri_advice_done)))
+            r.adviceOctant?.let {
+                tr(if (r.ambiguous) R.string.tri_alt_advice else R.string.tri_advice_value, resources.getStringArray(R.array.compass)[it])
+            } ?: getString(R.string.tri_advice_done)))
         add(Texts.row(getString(R.string.row_mast_id), "${r.radio} ${r.site}"))
         add(Texts.row(getString(R.string.row_position), String.format(Locale.ROOT, "%.5f, %.5f", r.lat, r.lon)))
         add("")

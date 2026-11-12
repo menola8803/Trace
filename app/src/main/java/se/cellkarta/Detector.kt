@@ -45,7 +45,11 @@ class Detector(private val ctx: android.content.Context, private val db: CellDb,
     private var referenceCheckedAt = 0L
     private var shortCheckedAt = 0L
 
-    fun process(cells: List<CellObs>, loc: Location) {
+    fun process(all: List<CellObs>, loc: Location) {
+        // Samma cell kan förekomma två gånger i samma avläsning. Den anslutna, annars den starkaste, behålls.
+        val cells = all.groupBy { it.key }.values.map { same ->
+            same.maxWith(compareBy<CellObs>({ it.registered }, { it.dbm ?: -200 }))
+        }
         val now = System.currentTimeMillis()
         if (now - referenceCheckedAt > REFERENCE_RECHECK_MS) {
             hasReference = db.knownCount() > 0
@@ -92,8 +96,7 @@ class Detector(private val ctx: android.content.Context, private val db: CellDb,
 
             // 2. Cell som verkar flytta sig.
             if (!db.hasFlag(c.key, CellDb.FLAG_MOVING)) {
-                val farthest = db.observations(c.key, now - MOVE_WINDOW_MS, 2000)
-                    .maxOfOrNull { Geo.km(it.lat, it.lon, lat, lon) } ?: 0.0
+                val farthest = db.farthestWithin(c.key, now - MOVE_WINDOW_MS, lat, lon, MOVE_KM) ?: 0.0
                 val fromRef = ref?.let { Geo.km(it.first, it.second, lat, lon) } ?: 0.0
 
                 if (farthest > MOVE_KM || fromRef > MOVE_KM) {

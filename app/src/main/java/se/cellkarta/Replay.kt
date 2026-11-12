@@ -281,7 +281,7 @@ class Replay(
         updateButtons()
     }
 
-    private fun pause() {
+    fun pause() {
         playing = false
         handler.removeCallbacks(tick)
         updateButtons()

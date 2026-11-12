@@ -362,6 +362,52 @@
     <string name="tri_remove_msg">Masten, cirkeln, ringarna och pilarna tas bort från kartan. Mätningarna finns kvar.</string>
     <string name="tri_remove_all">Ta bort alla</string>
 
+    <!-- Triangulering: två möjliga sidor -->
+    <string name="tri_alt_title">Eller här?</string>
+    <string name="tri_alt_text">Mätningarna ligger nästan på en rak linje, till exempel längs en väg. Då passar avstånden lika bra på båda sidor om linjen, och masten kan stå på vilken sida som helst.</string>
+    <string name="tri_alt_row">Sida</string>
+    <string name="tri_alt_value">osäker, masten kan stå på andra sidan om dina mätningar (streckad)</string>
+    <string name="tri_alt_advice">mät längre åt %1$s, bort från linjen, så avgörs vilken sida som stämmer</string>
+
+    <!-- Apptrafik -->
+    <string name="traffic_section">APPTRAFIK</string>
+    <string name="traffic_title">Apptrafik</string>
+    <string name="traffic_sub">Data per app och servrarna de söker upp</string>
+    <string name="traffic_enable">Visa apptrafik</string>
+    <string name="traffic_enable_desc">Visar hur mycket data varje app skickar och tar emot över mobilnät och wifi, och om du vill vilka servrar apparna söker upp. Av från början.</string>
+    <string name="traffic_open">Öppna apptrafik</string>
+    <string name="menu_traffic">Apptrafik</string>
+    <string name="traffic_access_title">Användningsåtkomst behövs</string>
+    <string name="traffic_access_text">Android visar bara data per app för appar som har användningsåtkomst. Slå på den för Trace i listan som öppnas och gå sedan tillbaka hit.</string>
+    <string name="traffic_access_button">Ge användningsåtkomst</string>
+    <string name="traffic_today">Idag</string>
+    <string name="traffic_7d">7 dagar</string>
+    <string name="traffic_30d">30 dagar</string>
+    <string name="traffic_split">Mobilnät %1$s · Wifi %2$s</string>
+    <string name="traffic_down_up">↓ %1$s  ↑ %2$s</string>
+    <string name="traffic_total">Totalt mobilnät %1$s · wifi %2$s</string>
+    <string name="traffic_none">Ingen data för perioden.</string>
+    <string name="traffic_note">Android räknar datan i block om några timmar, så siffrorna för idag kan släpa efter lite.</string>
+    <string name="traffic_servers_n">›  %1$d servrar</string>
+    <string name="traffic_servers_hide">‹  Dölj servrar</string>
+    <string name="traffic_server_line">%1$d uppslag · senast %2$s</string>
+    <string name="traffic_more_servers">+ %1$d till</string>
+    <string name="traffic_only_lookups">ingen data räknad, bara uppslag</string>
+    <string name="traffic_unknown_app">Okänd app</string>
+    <string name="traffic_system">Android-systemet</string>
+    <string name="traffic_removed">Avinstallerade appar</string>
+    <string name="traffic_tethering">Surfzon och delning</string>
+    <string name="traffic_dns_title">Logga servernamn</string>
+    <string name="traffic_dns_desc">Startar ett lokalt VPN i telefonen som bara tar emot namnuppslag (DNS). Varje uppslag skickas oförändrat vidare till nätets vanliga DNS-server, och namnet sparas här tillsammans med appen som frågade. Ingen annan trafik går genom det och inget skickas någon annanstans. Appar som använder egen krypterad DNS, till exempel säker DNS i Chrome, syns inte. Ett annat VPN kan inte vara igång samtidigt.</string>
+    <string name="traffic_dns_on">På · %1$d uppslag sparade</string>
+    <string name="traffic_dns_off">Av</string>
+    <string name="traffic_dns_failed">Det lokala VPN:et kunde inte startas.</string>
+    <string name="traffic_dns_denied">Utan godkännande av VPN kan servernamnen inte loggas.</string>
+    <string name="traffic_dns_clear">Rensa serverloggen</string>
+    <string name="traffic_dns_cleared">Serverloggen är rensad.</string>
+    <string name="traffic_dns_private">Privat DNS är inställd på %1$s i telefonen. Då går apparnas uppslag krypterat förbi loggen. Välj Automatiskt under Inställningar → Nätverk → Privat DNS för att se dem.</string>
+    <string name="traffic_vpn_session">Trace servernamn</string>
+
     <!-- Händelseknappen -->
     <string name="events_button">Händelser</string>
     <string name="events_title">Händelser</string>

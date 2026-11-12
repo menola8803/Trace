@@ -20,6 +20,8 @@ object Prefs {
     private const val KEY_THEME = "theme"
     private const val KEY_TRI_MODE = "tri_mode"
     private const val KEY_TA = "timing_advance"
+    private const val KEY_TRAFFIC = "app_traffic"
+    private const val KEY_DNS_LOG = "dns_log"
 
     const val THEME_DARK = "dark"
     const val THEME_BEIGE = "beige"
@@ -82,4 +84,14 @@ object Prefs {
     fun timingAdvance(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_TA, false)
 
     fun setTimingAdvance(ctx: Context, on: Boolean) = sp(ctx).edit { putBoolean(KEY_TA, on) }
+
+    /** Apptrafik: data per app. Av från början. */
+    fun appTraffic(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_TRAFFIC, false)
+
+    fun setAppTraffic(ctx: Context, on: Boolean) = sp(ctx).edit { putBoolean(KEY_TRAFFIC, on) }
+
+    /** Logga servernamn med det lokala VPN:et. Av från början. */
+    fun dnsLog(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_DNS_LOG, false)
+
+    fun setDnsLog(ctx: Context, on: Boolean) = sp(ctx).edit { putBoolean(KEY_DNS_LOG, on) }
 }

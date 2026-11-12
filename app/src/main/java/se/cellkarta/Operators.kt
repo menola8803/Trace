@@ -38,7 +38,8 @@ object Operators {
 
     /**
      * Mast-ID ur en cellnyckel. För 4G är cell-ID:t mastens nummer (eNB) gånger 256 plus sektorn,
-     * för 5G används de översta bitarna, för 3G nätstyrningens nummer (RNC).
+     * för 5G används de översta bitarna. För 3G anger de översta bitarna bara nätstyrningen (RNC),
+     * som har hand om många master, så där går masten inte att utläsa.
      */
     fun mastId(key: String): Pair<String, Long>? {
         val p = key.split(':')
@@ -47,7 +48,6 @@ object Operators {
         val site = when (p[0]) {
             "LTE" -> cid / 256
             "NR" -> cid / 4096
-            "UMTS" -> cid / 65536
             else -> return null
         }
         return "${p[0]}:${p[1]}:${p[2]}" to site
@@ -59,7 +59,6 @@ object Operators {
         return when (p[0]) {
             "LTE" -> cid % 256
             "NR" -> cid % 4096
-            "UMTS" -> cid % 65536
             else -> null
         }
     }

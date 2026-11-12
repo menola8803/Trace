@@ -309,6 +309,28 @@ class CellDb private constructor(ctx: Context) :
             }.reversed()
         }
 
+    /**
+     * Längsta avståndet i km från platsen till en tidigare mätning av cellen, bland mätningar som
+     * ligger minst ungefär [km] bort. Null om alla ligger närmare. Databasen sorterar bort de nära
+     * mätningarna, så kontrollen kostar nästan inget även för celler med tusentals mätningar.
+     */
+    fun farthestWithin(key: String, since: Long, lat: Double, lon: Double, km: Double): Double? {
+        // En ruta som ryms inuti cirkeln: allt utanför rutan kan ligga längre bort än km.
+        val r = km / Math.sqrt(2.0)
+        val dLat = r / 111.0
+        val dLon = r / (111.0 * Math.cos(Math.toRadians(lat)).coerceAtLeast(0.1))
+        val sql = "SELECT lat, lon FROM obs WHERE cell_key=? AND ts>=? AND " +
+            "(lat < ${num(lat - dLat)} OR lat > ${num(lat + dLat)} OR lon < ${num(lon - dLon)} OR lon > ${num(lon + dLon)}) LIMIT 2000"
+        return readableDatabase.rawQuery(sql, arrayOf(key, since.toString())).use { c ->
+            var far: Double? = null
+            while (c.moveToNext()) {
+                val d = Geo.km(lat, lon, c.getDouble(0), c.getDouble(1))
+                if (far == null || d > far) far = d
+            }
+            far
+        }
+    }
+
     // ---- Avvikelser ----
 
     fun hasFlag(key: String, type: String): Boolean =
@@ -552,16 +574,17 @@ class CellDb private constructor(ctx: Context) :
     // ---- Export ----
 
     fun exportObservations(out: Writer) {
-        out.write("tid_utc,cell,radio,lat,lon,noggrannhet_m,dbm,ansluten\n")
+        out.write("time_utc,cell,radio,lat,lon,accuracy_m,dbm,connected,ta_m\n")
         readableDatabase.rawQuery(
-            "SELECT ts, cell_key, radio, lat, lon, acc, dbm, registered FROM obs ORDER BY ts", null
+            "SELECT ts, cell_key, radio, lat, lon, acc, dbm, registered, ta_m FROM obs ORDER BY ts", null
         ).use { c ->
             while (c.moveToNext()) {
                 val acc = if (c.isNull(5)) "" else String.format(Locale.ROOT, "%.0f", c.getDouble(5))
                 val dbm = if (c.isNull(6)) "" else c.getInt(6).toString()
+                val ta = if (c.isNull(8)) "" else String.format(Locale.ROOT, "%.0f", c.getDouble(8))
                 out.write(
                     "${Instant.ofEpochMilli(c.getLong(0))},${c.getString(1)},${c.getString(2)}," +
-                        "${c.getDouble(3)},${c.getDouble(4)},$acc,$dbm,${c.getInt(7)}\n"
+                        "${c.getDouble(3)},${c.getDouble(4)},$acc,$dbm,${c.getInt(7)},$ta\n"
                 )
             }
         }

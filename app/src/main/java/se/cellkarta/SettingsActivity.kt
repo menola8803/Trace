@@ -113,7 +113,11 @@ class SettingsActivity : BaseActivity() {
         showTri(Prefs.triMode(this))
         findViewById<Switch>(R.id.switchTa).apply {
             isChecked = Prefs.timingAdvance(this@SettingsActivity)
-            setOnCheckedChangeListener { _, on -> Prefs.setTimingAdvance(this@SettingsActivity, on) }
+            setOnCheckedChangeListener { _, on ->
+                Prefs.setTimingAdvance(this@SettingsActivity, on)
+                // Pågår inspelningen: slå på eller av direkt, utan omstart
+                CellMonitorService.refreshTimingAdvance(this@SettingsActivity)
+            }
         }
 
         setupSchedule()
@@ -124,6 +128,23 @@ class SettingsActivity : BaseActivity() {
             setOnCheckedChangeListener { _, on ->
                 Prefs.setMastDetails(this@SettingsActivity, on)
                 LiveStatus.bump()
+            }
+        }
+
+        // Apptrafik
+        val openTraffic = findViewById<View>(R.id.btnOpenTraffic)
+        openTraffic.visibility = if (Prefs.appTraffic(this)) View.VISIBLE else View.GONE
+        openTraffic.setOnClickListener { startActivity(Intent(this, AppTrafficActivity::class.java)) }
+        findViewById<Switch>(R.id.switchTraffic).apply {
+            isChecked = Prefs.appTraffic(this@SettingsActivity)
+            setOnCheckedChangeListener { _, on ->
+                Prefs.setAppTraffic(this@SettingsActivity, on)
+                openTraffic.visibility = if (on) View.VISIBLE else View.GONE
+                if (!on) {
+                    // Av betyder av: även loggningen av servernamn stängs
+                    Prefs.setDnsLog(this@SettingsActivity, false)
+                    DnsVpnService.stop(this@SettingsActivity)
+                }
             }
         }
 
@@ -148,13 +169,13 @@ class SettingsActivity : BaseActivity() {
         findViewById<View>(R.id.btnClearMarks).setOnClickListener {
             confirmReset(R.string.reset_marks, R.string.reset_marks_confirm, R.string.reset_marks_done) {
                 CellDb.get(this).clearFlags()
-                TriStore.results.clear()
+                TriStore.clear()
             }
         }
         findViewById<View>(R.id.btnClearAll).setOnClickListener {
             confirmReset(R.string.reset_all, R.string.reset_all_confirm, R.string.reset_all_done) {
                 CellDb.get(this).clearRecordings()
-                TriStore.results.clear()
+                TriStore.clear()
             }
         }
 
