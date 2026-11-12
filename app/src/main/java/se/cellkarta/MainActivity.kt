@@ -197,11 +197,17 @@ class MainActivity : BaseActivity() {
         applyInsets()
         setupMap()
         // Byte av tema eller språk bygger om skärmen: behåll samma utsnitt och zoom
-        savedInstanceState?.let { st ->
-            if (st.containsKey(STATE_ZOOM)) {
+        // Även om Android har stängt appen i bakgrunden: senaste utsnittet sparas också i inställningarna.
+        val st = savedInstanceState
+        if (st != null && st.containsKey(STATE_ZOOM)) {
+            centeredOnUser = true
+            map.controller.setZoom(st.getDouble(STATE_ZOOM))
+            map.controller.setCenter(GeoPoint(st.getDouble(STATE_LAT), st.getDouble(STATE_LON)))
+        } else if (st != null) {
+            Prefs.mapView(this)?.let { (lat, lon, zoom) ->
                 centeredOnUser = true
-                map.controller.setZoom(st.getDouble(STATE_ZOOM))
-                map.controller.setCenter(GeoPoint(st.getDouble(STATE_LAT), st.getDouble(STATE_LON)))
+                map.controller.setZoom(zoom)
+                map.controller.setCenter(GeoPoint(lat, lon))
             }
         }
 
@@ -305,6 +311,10 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onPause() {
+        // Kom ihåg Live-kartans utsnitt
+        val center = if (replay.active) savedCenter else GeoPoint(map.mapCenter.latitude, map.mapCenter.longitude)
+        val zoom = if (replay.active) savedZoom else map.zoomLevelDouble
+        if (center != null && zoom > 0) Prefs.setMapView(this, center.latitude, center.longitude, zoom)
         replay.pause()
         myLocation.disableMyLocation()
         map.onPause()
@@ -856,7 +866,10 @@ class MainActivity : BaseActivity() {
             if (map.width == 0 || map.height == 0 || replay.active) return@launch
             val box = map.boundingBox
             val zoom = map.zoomLevelDouble
-            val data = withContext(Dispatchers.IO) { loadMapData(box, zoom) }
+            // Ett fel när kartan läses in ska inte stänga appen: kartan behåller då det som redan visas
+            val data = withContext(Dispatchers.IO) { runCatching { loadMapData(box, zoom) } }
+                .onFailure { android.util.Log.w("Trace", "Kartan kunde inte läsas in", it) }
+                .getOrNull() ?: return@launch
             if (replay.active) return@launch
             draw(data)
             updateEventButton(data.events)

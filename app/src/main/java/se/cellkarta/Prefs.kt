@@ -96,4 +96,21 @@ object Prefs {
     fun dnsLog(ctx: Context): Boolean = sp(ctx).getBoolean(KEY_DNS_LOG, false)
 
     fun setDnsLog(ctx: Context, on: Boolean) = sp(ctx).edit { putBoolean(KEY_DNS_LOG, on) }
+
+    /** Live-kartans senaste utsnitt: latitud, longitud och zoom. */
+    fun mapView(ctx: Context): Triple<Double, Double, Double>? {
+        val p = sp(ctx)
+        if (!p.contains("map_zoom")) return null
+        return Triple(
+            java.lang.Double.longBitsToDouble(p.getLong("map_lat", 0L)),
+            java.lang.Double.longBitsToDouble(p.getLong("map_lon", 0L)),
+            java.lang.Double.longBitsToDouble(p.getLong("map_zoom", 0L)),
+        )
+    }
+
+    fun setMapView(ctx: Context, lat: Double, lon: Double, zoom: Double) = sp(ctx).edit {
+        putLong("map_lat", java.lang.Double.doubleToRawLongBits(lat))
+        putLong("map_lon", java.lang.Double.doubleToRawLongBits(lon))
+        putLong("map_zoom", java.lang.Double.doubleToRawLongBits(zoom))
+    }
 }
