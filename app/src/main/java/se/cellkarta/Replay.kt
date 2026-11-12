@@ -141,6 +141,15 @@ class Replay(
         }
         btnPrev.setOnClickListener { jumpToEvent(prevEventIx()) }
         btnNext.setOnClickListener { jumpToEvent(nextEventIx()) }
+        // Kartan krymper när panelen visas. Håll då positionen i mitten av det som syns,
+        // annars hamnar vägen och pricken bakom panelen.
+        map.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (!active || bottom - top == oldBottom - oldTop) return@addOnLayoutChangeListener
+            val here = position?.takeIf { it in added }?.position
+                ?: path.lastOrNull { it.ts <= cur }?.let { GeoPoint(it.lat, it.lon) }
+                ?: return@addOnLayoutChangeListener
+            map.post { map.controller.setCenter(here) }
+        }
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
                 if (!fromUser || t1 <= t0) return

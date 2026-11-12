@@ -45,7 +45,12 @@ class Detector(private val ctx: android.content.Context, private val db: CellDb,
     private var referenceCheckedAt = 0L
     private var shortCheckedAt = 0L
 
-    fun process(all: List<CellObs>, loc: Location) {
+    /**
+     * [acc] är positionens osäkerhet i meter, större om positionen är gammal. [precise] är false när
+     * positionen är för grov eller för gammal: då sparas mätningen ändå, men kontrollerna som bygger
+     * på exakt plats (cell som flyttar sig) hoppas över, och trianguleringen använder den inte.
+     */
+    fun process(all: List<CellObs>, loc: Location, acc: Float = loc.accuracy, precise: Boolean = true) {
         // Samma cell kan förekomma två gånger i samma avläsning. Den anslutna, annars den starkaste, behålls.
         val cells = all.groupBy { it.key }.values.map { same ->
             same.maxWith(compareBy<CellObs>({ it.registered }, { it.dbm ?: -200 }))
@@ -65,14 +70,14 @@ class Detector(private val ctx: android.content.Context, private val db: CellDb,
         TraceFiles.appendMeasurements(ctx, now, cells.map { c ->
             String.format(
                 Locale.ROOT, "%s,%s,%s,%.7f,%.7f,%.0f,%s,%d,%s\n",
-                time, c.key, c.radio, lat, lon, loc.accuracy, c.dbm?.toString() ?: "", if (c.registered) 1 else 0,
+                time, c.key, c.radio, lat, lon, acc, c.dbm?.toString() ?: "", if (c.registered) 1 else 0,
                 c.taM?.let { String.format(Locale.ROOT, "%.0f", it) } ?: ""
             )
         })
 
         for (c in cells) {
             val firstTime = !db.isSeen(c.key)
-            db.recordObservation(c, lat, lon, loc.accuracy, now)
+            db.recordObservation(c, lat, lon, acc, now)
             val ref = db.knownPos(c.key)
 
             // 1. Ny cell. Utan referensdata vore alla celler "nya", så då varnar vi inte.
@@ -95,7 +100,7 @@ class Detector(private val ctx: android.content.Context, private val db: CellDb,
             }
 
             // 2. Cell som verkar flytta sig.
-            if (!db.hasFlag(c.key, CellDb.FLAG_MOVING)) {
+            if (precise && !db.hasFlag(c.key, CellDb.FLAG_MOVING)) {
                 val farthest = db.farthestWithin(c.key, now - MOVE_WINDOW_MS, lat, lon, MOVE_KM) ?: 0.0
                 val fromRef = ref?.let { Geo.km(it.first, it.second, lat, lon) } ?: 0.0
 
@@ -110,7 +115,7 @@ class Detector(private val ctx: android.content.Context, private val db: CellDb,
         }
 
         // Kortvarig cell: kontrolleras var femte minut.
-        if (now - shortCheckedAt > SHORT_CHECK_MS) {
+        if (precise && now - shortCheckedAt > SHORT_CHECK_MS) {
             shortCheckedAt = now
             if (checkShortLived(now)) changed = true
         }

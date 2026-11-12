@@ -312,7 +312,7 @@ class CellDb private constructor(ctx: Context) :
 
     fun observations(key: String, since: Long, limit: Int): List<ObsRow> =
         readableDatabase.rawQuery(
-            "SELECT ts, lat, lon, dbm FROM obs WHERE cell_key=? AND ts>=? ORDER BY ts DESC LIMIT $limit",
+            "SELECT ts, lat, lon, dbm FROM obs WHERE cell_key=? AND ts>=? AND (acc IS NULL OR acc <= ${CellMonitorService.MAX_ACCURACY_M}) ORDER BY ts DESC LIMIT $limit",
             arrayOf(key, since.toString())
         ).use { c ->
             buildList {
@@ -332,7 +332,7 @@ class CellDb private constructor(ctx: Context) :
         val r = km / Math.sqrt(2.0)
         val dLat = r / 111.0
         val dLon = r / (111.0 * Math.cos(Math.toRadians(lat)).coerceAtLeast(0.1))
-        val sql = "SELECT lat, lon FROM obs WHERE cell_key=? AND ts>=? AND " +
+        val sql = "SELECT lat, lon FROM obs WHERE cell_key=? AND ts>=? AND (acc IS NULL OR acc <= ${CellMonitorService.MAX_ACCURACY_M}) AND " +
             "(lat < ${num(lat - dLat)} OR lat > ${num(lat + dLat)} OR lon < ${num(lon - dLon)} OR lon > ${num(lon + dLon)}) LIMIT 2000"
         return readableDatabase.rawQuery(sql, arrayOf(key, since.toString())).use { c ->
             var far: Double? = null
@@ -599,7 +599,7 @@ class CellDb private constructor(ctx: Context) :
     fun stayedNear(exceptKey: String, after: Long, lat: Double, lon: Double, km: Double): Boolean {
         val dLat = km / 111.0
         val dLon = km / (111.0 * Math.cos(Math.toRadians(lat)).coerceAtLeast(0.1))
-        val sql = "SELECT lat, lon FROM obs WHERE ts >= $after AND cell_key != ? " +
+        val sql = "SELECT lat, lon FROM obs WHERE ts >= $after AND cell_key != ? AND (acc IS NULL OR acc <= ${CellMonitorService.MAX_ACCURACY_M}) " +
             "AND lat BETWEEN ${num(lat - dLat)} AND ${num(lat + dLat)} " +
             "AND lon BETWEEN ${num(lon - dLon)} AND ${num(lon + dLon)} LIMIT 200"
         return readableDatabase.rawQuery(sql, arrayOf(exceptKey)).use { c ->

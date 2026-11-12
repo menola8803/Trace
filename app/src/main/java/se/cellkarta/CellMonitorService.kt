@@ -31,6 +31,10 @@ class CellMonitorService : Service(), LocationListener {
         const val INTERVAL_MS = 15_000L
         const val MAX_ACCURACY_M = 100f
         const val MAX_LOCATION_AGE_MS = 60_000L
+        /** Grövre eller äldre än så här sparas inte alls: positionen säger då för lite. */
+        private const val MAX_SAVE_ACCURACY_M = 5_000f
+        /** En gammal position blir osäkrare för varje sekund, ungefär som en promenad. */
+        private const val AGE_GROWTH_M_PER_S = 2f
         private const val TAG = "Cellkarta"
         private const val ACTION_TA = "se.cellkarta.TA_CHANGED"
         private const val FIND_INTERVAL_MS = 120_000L
@@ -182,6 +186,10 @@ class CellMonitorService : Service(), LocationListener {
         if (lm.allProviders.contains(LocationManager.NETWORK_PROVIDER)) {
             lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 10_000L, 0f, this, Looper.getMainLooper())
         }
+        // Androids egen sammanvägning av GPS, wifi och mobilnät: ger position även inomhus.
+        if (android.os.Build.VERSION.SDK_INT >= 31 && lm.allProviders.contains(LocationManager.FUSED_PROVIDER)) {
+            runCatching { lm.requestLocationUpdates(LocationManager.FUSED_PROVIDER, 5_000L, 0f, this, Looper.getMainLooper()) }
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -200,20 +208,24 @@ class CellMonitorService : Service(), LocationListener {
     /** Körs på worker-tråden, så databasarbetet stör inte gränssnittet. */
     @SuppressLint("MissingPermission")
     private fun handle(fresh: List<CellInfo>?) {
-        val loc = lastLocation
-        if (loc == null ||
-            loc.accuracy > MAX_ACCURACY_M ||
-            System.currentTimeMillis() - loc.time > MAX_LOCATION_AGE_MS
-        ) {
-            LiveStatus.note(
-                if (loc == null) getString(R.string.note_wait_position)
-                else tr(R.string.note_wait_accuracy, loc.accuracy.toInt())
-            )
+        // Inomhus kommer GPS ofta inte fram. Mätningen sparas ändå, med positionens verkliga
+        // osäkerhet, så att inspelningen inte blir tom. Bara exakta positioner används för masterna.
+        val loc = freshestLocation()
+        if (loc == null) {
+            LiveStatus.note(getString(R.string.note_wait_position))
             return
         }
+        val ageS = ((System.currentTimeMillis() - loc.time) / 1000L).coerceAtLeast(0L)
+        val acc = loc.accuracy + if (ageS * 1000L > MAX_LOCATION_AGE_MS) (ageS - MAX_LOCATION_AGE_MS / 1000L) * AGE_GROWTH_M_PER_S else 0f
+        if (acc > MAX_SAVE_ACCURACY_M) {
+            LiveStatus.note(tr(R.string.note_wait_accuracy, acc.toInt()))
+            return
+        }
+        val precise = acc <= MAX_ACCURACY_M
         try {
             val list = fresh ?: tm.allCellInfo ?: emptyList()
-            detector.process(CellReader.parse(list), loc)
+            detector.process(CellReader.parse(list), loc, acc, precise)
+            if (!precise) LiveStatus.note(tr(R.string.note_imprecise, acc.toInt()))
         } catch (e: Exception) {
             Log.w(TAG, "Mätningen misslyckades", e)
         }
@@ -267,6 +279,17 @@ class CellMonitorService : Service(), LocationListener {
                 else -> null
             }
         }
+    }
+
+    /** Den senaste positionen, eller en färskare som någon annan app redan har tagit fram. */
+    @SuppressLint("MissingPermission")
+    private fun freshestLocation(): Location? {
+        val candidates = listOfNotNull(lastLocation) + runCatching {
+            lm.allProviders.mapNotNull { p -> runCatching { lm.getLastKnownLocation(p) }.getOrNull() }
+        }.getOrDefault(emptyList())
+        // Den med minst osäkerhet när åldern räknas in
+        val now = System.currentTimeMillis()
+        return candidates.minByOrNull { it.accuracy + ((now - it.time) / 1000f).coerceAtLeast(0f) * AGE_GROWTH_M_PER_S }
     }
 
     override fun onLocationChanged(location: Location) {

@@ -69,6 +69,7 @@
     <string name="note_location_off">Location is off. Turn on Location in quick settings.</string>
     <string name="note_gps_off">GPS is off. Turn on Location in quick settings.</string>
     <string name="note_no_permission">The app does not have permission for precise location.</string>
+    <string name="note_imprecise">Saving with an approximate position (±%1$d m). Masts are only calculated from precise positions, so go outside if you can.</string>
     <string name="note_wait_position">Waiting for a position. Move closer to a window or go outside.</string>
     <string name="note_wait_accuracy">Waiting for a more precise position (now ±%1$d m)…</string>
 

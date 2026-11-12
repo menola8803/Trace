@@ -76,6 +76,7 @@
     <string name="note_location_off">Platstjänster är avstängda. Slå på Plats i snabbinställningarna.</string>
     <string name="note_gps_off">GPS är avstängd. Slå på Plats i snabbinställningarna.</string>
     <string name="note_no_permission">Appen saknar behörighet till exakt plats.</string>
+    <string name="note_imprecise">Sparar med ungefärlig position (±%1$d m). Masterna räknas bara från exakta positioner, gå gärna ut.</string>
     <string name="note_wait_position">Väntar på position. Gå gärna närmare ett fönster eller ut.</string>
     <string name="note_wait_accuracy">Väntar på exaktare position (just nu ±%1$d m)…</string>
 
