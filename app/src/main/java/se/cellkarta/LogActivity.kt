@@ -48,25 +48,66 @@ class LogActivity : BaseActivity() {
         }
     }
 
+    /** Filter: 0 alla, 1 live, 2 schemalagda, 3 med triangulering. */
+    private var filter = 0
+    private var all: List<Pair<Recording, Int>> = emptyList()
+
     override fun onResume() {
         super.onResume()
         lifecycleScope.launch {
-            val days = withContext(Dispatchers.IO) { db.days() }
-            val counts = withContext(Dispatchers.IO) {
-                days.associate { day -> day.day to db.flagsBetween(start(day.day), start(day.day) + 86_400_000L).size }
+            all = withContext(Dispatchers.IO) {
+                db.recordings().map { r -> r to db.flagsBetween(r.from, r.to + 1000L).size }
             }
-            list.removeAllViews()
-            if (days.isEmpty()) {
-                list.addView(text(getString(R.string.log_empty), R.color.muted, 14f).apply {
-                    gravity = Gravity.CENTER
-                    setPadding(0, (48 * d).toInt(), 0, 0)
-                })
-            }
-            days.forEach { list.addView(dayCard(it, counts[it.day] ?: 0)) }
+            render()
         }
     }
 
-    private fun start(day: String): Long = LocalDate.parse(day).atStartOfDay(zone).toInstant().toEpochMilli()
+    private fun render() {
+        list.removeAllViews()
+        if (all.isEmpty()) {
+            list.addView(text(getString(R.string.log_empty), R.color.muted, 14f).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, (48 * d).toInt(), 0, 0)
+            })
+            return
+        }
+        // Tre sorters inspelningar: välj vilka som visas
+        list.addView(android.widget.FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (12 * d).toInt() }
+            addView(Ui.Segmented(this@LogActivity).apply {
+                set(listOf(
+                    0 to getString(R.string.log_filter_all),
+                    1 to getString(R.string.log_filter_live),
+                    2 to getString(R.string.log_filter_scheduled),
+                    3 to getString(R.string.rec_tri),
+                ), filter)
+                onChange = { v -> filter = v; render() }
+            })
+        })
+        val shown = all.filter { (r, _) ->
+            when (filter) {
+                1 -> r.kind == CellDb.KIND_LIVE
+                2 -> r.kind == CellDb.KIND_SCHEDULED
+                3 -> r.tri
+                else -> true
+            }
+        }
+        if (shown.isEmpty()) {
+            list.addView(text(getString(R.string.log_filter_none), R.color.muted, 14f).apply {
+                gravity = Gravity.CENTER
+                setPadding(0, (32 * d).toInt(), 0, 0)
+            })
+        }
+        var lastDay: String? = null
+        shown.forEach { (r, events) ->
+            if (r.day != lastDay) {
+                lastDay = r.day
+                list.addView(text(dayFmt.format(LocalDate.parse(r.day)).replaceFirstChar { it.titlecase(Lang.locale(this)) },
+                    R.color.gold, 13f, bold = true).apply { setPadding(0, (18 * d).toInt(), 0, 0) })
+            }
+            list.addView(recordingCard(r, events))
+        }
+    }
 
     private fun text(s: String, color: Int, sp: Float, bold: Boolean = false) = TextView(this).apply {
         text = s
@@ -76,44 +117,37 @@ class LogActivity : BaseActivity() {
         setLineSpacing(2f * d, 1f)
     }
 
-    private fun dayCard(day: DaySummary, eventCount: Int): View {
+    private fun recordingCard(r: Recording, eventCount: Int): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             background = ContextCompat.getDrawable(this@LogActivity, R.drawable.bg_card)
             val p = (14 * d).toInt()
             setPadding(p, p, p, p)
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (12 * d).toInt() }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (10 * d).toInt() }
             isClickable = true
             isFocusable = true
             foreground = ContextCompat.getDrawable(this@LogActivity, android.R.drawable.list_selector_background)
         }
 
-        val date = LocalDate.parse(day.day)
-        card.addView(text(dayFmt.format(date).replaceFirstChar { it.titlecase(Lang.locale(this)) }, R.color.ink, 16f, bold = true))
+        card.addView(Recordings.pills(this, r))
         card.addView(text(
-            tr(R.string.log_day_summary, day.measurements, day.cells,
-                clock.format(Instant.ofEpochMilli(day.firstTs)), clock.format(Instant.ofEpochMilli(day.lastTs))),
-            R.color.muted, 13f
-        ))
-        if (day.minDbm != null && day.maxDbm != null) {
-            card.addView(text(tr(R.string.log_day_signal, day.minDbm, day.maxDbm), R.color.muted, 13f))
+            tr(R.string.log_day_summary, r.measurements, r.cells,
+                clock.format(Instant.ofEpochMilli(r.from)), clock.format(Instant.ofEpochMilli(r.to))),
+            R.color.ink, 14f, bold = true
+        ).apply { setPadding(0, (8 * d).toInt(), 0, 0) })
+        if (r.minDbm != null && r.maxDbm != null) {
+            card.addView(text(tr(R.string.log_day_signal, r.minDbm, r.maxDbm), R.color.muted, 13f))
         }
         card.addView(
             if (eventCount > 0) text("›  " + tr(R.string.log_day_events, eventCount), R.color.gold, 13f, bold = true)
             else text(getString(R.string.log_day_no_events), R.color.dim, 13f)
         )
-        card.addView(text(tr(R.string.log_day_files, day.day), R.color.dim, 11f).apply {
+        card.addView(text(tr(R.string.log_day_files, r.day), R.color.dim, 11f).apply {
             setPadding(0, (4 * d).toInt(), 0, 0)
         })
-        card.addView(text("▶  " + getString(R.string.menu_replay), R.color.mint, 13f, bold = true).apply {
+        card.addView(text(getString(R.string.replay_recording), R.color.mint, 13f, bold = true).apply {
             setPadding(0, (10 * d).toInt(), 0, (2 * d).toInt())
-            setOnClickListener {
-                startActivity(
-                    Intent(this@LogActivity, MainActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                        .putExtra(MainActivity.EXTRA_REPLAY_DAY, day.day)
-                )
-            }
+            setOnClickListener { startActivity(MainActivity.replayIntent(this@LogActivity, r)) }
         })
 
         val events = LinearLayout(this).apply {
@@ -129,7 +163,7 @@ class LogActivity : BaseActivity() {
                 return@setOnClickListener
             }
             lifecycleScope.launch {
-                val flags = withContext(Dispatchers.IO) { db.flagsBetween(start(day.day), start(day.day) + 86_400_000L) }
+                val flags = withContext(Dispatchers.IO) { db.flagsBetween(r.from, r.to + 1000L) }
                 events.removeAllViews()
                 flags.forEach { events.addView(eventRow(it)) }
                 events.visibility = View.VISIBLE

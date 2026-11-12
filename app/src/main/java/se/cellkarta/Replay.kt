@@ -161,22 +161,20 @@ class Replay(
         })
     }
 
-    /** Spelar upp dagen. Med startAt spelas händelsen vid den tidpunkten upp i händelseläge. */
-    fun open(day: String, startAt: Long? = null) {
+    /** Spelar upp en inspelning. Med startAt spelas händelsen vid den tidpunkten upp i händelseläge. */
+    fun open(from: Long, to: Long, title: String, startAt: Long? = null) {
         active = true
         pause()
         InfoWindow.closeAllInfoWindowsOn(map)
         bubble.openKey = null
         panel.visibility = View.VISIBLE
-        dateText.text = dayFmt.format(LocalDate.parse(day)).replaceFirstChar { it.titlecase(Lang.locale(act)) }
+        dateText.text = title
         timeText.text = ""
         infoText.text = act.getString(R.string.preparing)
         eventRow.visibility = View.GONE
 
         act.lifecycleScope.launch {
             try {
-                val from = LocalDate.parse(day).atStartOfDay(zone).toInstant().toEpochMilli()
-                val to = from + 86_400_000L
                 val loaded = withContext(Dispatchers.IO) { db.replayRows(from, to) to db.flagsBetween(from, to) }
                 rows = loaded.first
                 events = loaded.second

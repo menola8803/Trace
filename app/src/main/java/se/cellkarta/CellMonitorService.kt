@@ -72,6 +72,7 @@ class CellMonitorService : Service(), LocationListener {
 
     /** Beräkningarna tar tid, därför en egen tråd, så att mätningarna inte väntar. */
     private val finder = Executors.newSingleThreadExecutor()
+    @Volatile private var sessionId = -1L
     private val finding = java.util.concurrent.atomic.AtomicBoolean(false)
     private var lastFindAt = 0L
     private var findSince = 0L
@@ -147,6 +148,11 @@ class CellMonitorService : Service(), LocationListener {
         }
         if (!started) {
             started = true
+            // En ny inspelning i loggen: schemalagd eller startad för hand
+            val kind = if (Schedule.startedBySchedule(this)) CellDb.KIND_SCHEDULED else CellDb.KIND_LIVE
+            sessionId = runCatching {
+                CellDb.get(this).startSession(kind, Prefs.triMode(this) == Prefs.TRI_AUTO, System.currentTimeMillis())
+            }.getOrDefault(-1L)
             startLocationUpdates()
             startDisplayInfo()
             if (Prefs.timingAdvance(this)) taKeeper.start()
@@ -244,6 +250,9 @@ class CellMonitorService : Service(), LocationListener {
             }
             detector.process(cells, loc, acc, precise)
             LiveStatus.saved()
+            if (sessionId > 0) runCatching {
+                CellDb.get(this).touchSession(sessionId, System.currentTimeMillis(), Prefs.triMode(this) == Prefs.TRI_AUTO)
+            }
             if (!precise) LiveStatus.note(tr(R.string.note_imprecise, acc.toInt()))
         } catch (e: Throwable) {
             // Även allvarliga fel fångas, så att inspelningen fortsätter och felet syns på skärmen

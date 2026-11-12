@@ -90,6 +90,23 @@ data class DaySummary(
     val maxDbm: Int?,
 )
 
+/**
+ * En inspelning: från start till stopp. [kind] är LIVE (startad för hand), SCHEDULED (schemalagd)
+ * eller EARLIER (från innan inspelningar sparades var för sig, en per dag).
+ */
+data class Recording(
+    val kind: String,
+    val tri: Boolean,
+    val from: Long,
+    val to: Long,
+    val measurements: Int,
+    val cells: Int,
+    val minDbm: Int?,
+    val maxDbm: Int?,
+) {
+    val day: String get() = java.time.Instant.ofEpochMilli(from).atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()
+}
+
 data class Cluster(val lat: Double, val lon: Double, val count: Int)
 
 data class UserMast(val id: Long, val lat: Double, val lon: Double, val ts: Long)
@@ -107,10 +124,13 @@ data class KnownCell(val key: String, val lat: Double, val lon: Double)
  *  flags        avvikelser: ny cell, cell som flyttar sig, nedgradering
  */
 class CellDb private constructor(ctx: Context) :
-    SQLiteOpenHelper(ctx, "cellkarta.db", null, 5) {
+    SQLiteOpenHelper(ctx, "cellkarta.db", null, 6) {
 
     companion object {
         const val FLAG_NEW = "NEW"
+        const val KIND_LIVE = "LIVE"
+        const val KIND_SCHEDULED = "SCHEDULED"
+        const val KIND_EARLIER = "EARLIER"
         const val FLAG_MOVING = "MOVING"
         const val FLAG_DOWNGRADE = "DOWNGRADE"
         const val FLAG_STRONG = "STRONG"
@@ -157,6 +177,14 @@ class CellDb private constructor(ctx: Context) :
         db.execSQL("CREATE INDEX idx_flags_type ON flags(type, cell_key)")
         createMasts(db)
         createFound(db)
+        createSessions(db)
+    }
+
+    private fun createSessions(db: SQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, " +
+                "tri INTEGER NOT NULL DEFAULT 0, start_ts INTEGER NOT NULL, end_ts INTEGER NOT NULL)"
+        )
     }
 
     /** Master som trianguleringen har hittat och placerat ut. */
@@ -176,6 +204,7 @@ class CellDb private constructor(ctx: Context) :
         if (oldVersion < 3) createMasts(db)
         if (oldVersion < 4) db.execSQL("ALTER TABLE obs ADD COLUMN ta_m REAL")
         if (oldVersion < 5) createFound(db)
+        if (oldVersion < 6) createSessions(db)
     }
 
     /** Master som användaren själv har markerat på kartan. */
@@ -460,6 +489,60 @@ class CellDb private constructor(ctx: Context) :
         writableDatabase.delete("flags", null, null)
     }
 
+    // ---- Inspelningar ----
+
+    fun startSession(kind: String, tri: Boolean, ts: Long): Long =
+        writableDatabase.insert("sessions", null, ContentValues().apply {
+            put("kind", kind); put("tri", if (tri) 1 else 0); put("start_ts", ts); put("end_ts", ts)
+        })
+
+    /** Flyttar fram slutet. Anropas efter varje sparad avläsning, så det stämmer även om appen stängs. */
+    fun touchSession(id: Long, ts: Long, tri: Boolean) {
+        writableDatabase.execSQL(
+            "UPDATE sessions SET end_ts = MAX(end_ts, ?), tri = MAX(tri, ?) WHERE id = ?",
+            arrayOf<Any>(ts, if (tri) 1 else 0, id)
+        )
+    }
+
+    /**
+     * Alla inspelningar, senaste först. Mätningar från innan inspelningarna sparades var för sig
+     * visas som en tidigare inspelning per dag. Inspelningar utan mätningar som varade kortare
+     * än en minut visas inte.
+     */
+    fun recordings(): List<Recording> {
+        val db = readableDatabase
+        data class S(val kind: String, val tri: Boolean, val from: Long, val to: Long)
+        val sessions = db.rawQuery("SELECT kind, tri, start_ts, end_ts FROM sessions ORDER BY start_ts DESC", null).use { c ->
+            buildList { while (c.moveToNext()) add(S(c.getString(0), c.getInt(1) == 1, c.getLong(2), c.getLong(3))) }
+        }
+        val out = ArrayList<Recording>()
+        for ((kind, tri, from, to) in sessions) {
+            db.rawQuery(
+                "SELECT COUNT(*), COUNT(DISTINCT cell_key), MIN(dbm), MAX(dbm), MAX(ts) FROM obs WHERE ts >= ? AND ts <= ?",
+                arrayOf(from.toString(), (to + 1000L).toString())
+            ).use { c ->
+                c.moveToFirst()
+                val n = c.getInt(0)
+                if (n == 0 && to - from < 60_000L) return@use
+                out.add(Recording(kind, tri, from, maxOf(to, if (c.isNull(4)) to else c.getLong(4)), n, c.getInt(1),
+                    if (c.isNull(2)) null else c.getInt(2), if (c.isNull(3)) null else c.getInt(3)))
+            }
+        }
+        // Tidigare mätningar, per dag
+        val firstSession = sessions.minOfOrNull { it.from } ?: Long.MAX_VALUE
+        db.rawQuery(
+            "SELECT date(ts / 1000, 'unixepoch', 'localtime') AS d, COUNT(*), COUNT(DISTINCT cell_key), MIN(ts), MAX(ts), " +
+                "MIN(dbm), MAX(dbm) FROM obs WHERE ts < ? GROUP BY d",
+            arrayOf(firstSession.toString())
+        ).use { c ->
+            while (c.moveToNext()) {
+                out.add(Recording(KIND_EARLIER, false, c.getLong(3), c.getLong(4), c.getInt(1), c.getInt(2),
+                    if (c.isNull(5)) null else c.getInt(5), if (c.isNull(6)) null else c.getInt(6)))
+            }
+        }
+        return out.sortedByDescending { it.from }
+    }
+
     // ---- Hittade master ----
 
     fun saveFound(r: Triangulate.Result) {
@@ -534,7 +617,7 @@ class CellDb private constructor(ctx: Context) :
         val db = writableDatabase
         db.beginTransaction()
         try {
-            listOf("obs", "seen", "flags", "masts", "found_masts").forEach { db.delete(it, null, null) }
+            listOf("obs", "seen", "flags", "masts", "found_masts", "sessions").forEach { db.delete(it, null, null) }
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()

@@ -143,6 +143,15 @@
     <string name="storage_delete_failed">Kunde inte ta bort filerna: %1$s</string>
 
     <!-- Logg per dag -->
+    <string name="rec_live">Liveinspelning</string>
+    <string name="rec_scheduled">Schemalagd inspelning</string>
+    <string name="rec_earlier">Tidigare inspelning</string>
+    <string name="rec_tri">Triangulering</string>
+    <string name="replay_recording">▶  Spela upp inspelningen</string>
+    <string name="log_filter_all">Alla</string>
+    <string name="log_filter_live">Live</string>
+    <string name="log_filter_scheduled">Schema</string>
+    <string name="log_filter_none">Inga inspelningar av den sorten än.</string>
     <string name="log_title">Logg per dag</string>
     <string name="log_empty">Inget loggat än. Starta övervakningen på kartan, så samlas mätningarna här dag för dag.</string>
     <string name="log_day_summary">%1$,d mätningar · %2$d celler · %3$s–%4$s</string>
@@ -309,7 +318,7 @@
     <string name="theme_dark">Mörkt</string>
     <string name="theme_beige">Beige</string>
     <string name="settings_sub">Språk, utseende, inspelning och uppdateringar</string>
-    <string name="log_sub">Allt som har spelats in, dag för dag</string>
+    <string name="log_sub">Varje inspelning, dag för dag</string>
     <string name="about_sub">Utvecklare och version</string>
 
     <!-- Triangulering -->

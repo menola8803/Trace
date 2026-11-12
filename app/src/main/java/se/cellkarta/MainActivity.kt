@@ -76,7 +76,18 @@ class MainActivity : BaseActivity() {
     companion object {
         const val EXTRA_LAT = "se.cellkarta.LAT"
         const val EXTRA_LON = "se.cellkarta.LON"
-        const val EXTRA_REPLAY_DAY = "se.cellkarta.REPLAY_DAY"
+        const val EXTRA_REPLAY_FROM = "se.cellkarta.REPLAY_FROM"
+        const val EXTRA_REPLAY_TO = "se.cellkarta.REPLAY_TO"
+        const val EXTRA_REPLAY_KIND = "se.cellkarta.REPLAY_KIND"
+        const val EXTRA_REPLAY_TRI = "se.cellkarta.REPLAY_TRI"
+
+        /** Öppnar kartan och spelar upp inspelningen. */
+        fun replayIntent(ctx: android.content.Context, r: Recording) = Intent(ctx, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            .putExtra(EXTRA_REPLAY_FROM, r.from)
+            .putExtra(EXTRA_REPLAY_TO, r.to)
+            .putExtra(EXTRA_REPLAY_KIND, r.kind)
+            .putExtra(EXTRA_REPLAY_TRI, r.tri)
 
         /** Från den här zoomnivån visas enskilda master, annars kluster. */
         private const val DETAIL_ZOOM = 11.0
@@ -243,9 +254,13 @@ class MainActivity : BaseActivity() {
     /** "Visa på kartan" från listan över celler eller loggen per dag. */
     private fun focusFromIntent(intent: Intent?) {
         if (intent == null) return
-        intent.getStringExtra(EXTRA_REPLAY_DAY)?.let { day ->
-            intent.removeExtra(EXTRA_REPLAY_DAY)
-            map.post { startReplay(day) }
+        if (intent.hasExtra(EXTRA_REPLAY_FROM)) {
+            val r = Recording(
+                intent.getStringExtra(EXTRA_REPLAY_KIND) ?: CellDb.KIND_EARLIER, intent.getBooleanExtra(EXTRA_REPLAY_TRI, false),
+                intent.getLongExtra(EXTRA_REPLAY_FROM, 0L), intent.getLongExtra(EXTRA_REPLAY_TO, 0L), 0, 0, null, null,
+            )
+            intent.removeExtra(EXTRA_REPLAY_FROM)
+            map.post { startReplay(r) }
             return
         }
         val lat = intent.getDoubleExtra(EXTRA_LAT, Double.NaN)
@@ -600,22 +615,18 @@ class MainActivity : BaseActivity() {
 
     // ---- Uppspelning ----
 
-    /** Listan som öppnas från replay-knappen: ett kort per dag med dagens händelser. */
+    /** Listan som öppnas från replay-knappen: ett kort per inspelning med dess händelser. */
     private fun chooseReplayDay() {
         lifecycleScope.launch {
             val data = withContext(Dispatchers.IO) {
-                val zone = ZoneId.systemDefault()
-                db.days().map { d ->
-                    val from = java.time.LocalDate.parse(d.day).atStartOfDay(zone).toInstant().toEpochMilli()
-                    d to db.flagsBetween(from, from + 86_400_000L)
-                }
+                db.recordings().map { r -> r to db.flagsBetween(r.from, r.to + 1000L) }
             }
             if (data.isEmpty()) return@launch toast(getString(R.string.replay_no_days))
             showReplayPicker(data)
         }
     }
 
-    private fun showReplayPicker(data: List<Pair<DaySummary, List<FlagRow>>>) {
+    private fun showReplayPicker(data: List<Pair<Recording, List<FlagRow>>>) {
         val loc = Lang.locale(this)
         val dayFmt = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy", loc)
         val hm = DateTimeFormatter.ofPattern("HH:mm", loc).withZone(ZoneId.systemDefault())
@@ -633,7 +644,14 @@ class MainActivity : BaseActivity() {
         val list = findViewById<android.widget.LinearLayout>(R.id.pickerList)
         list.removeAllViews()
 
-        data.forEach { (day, events) ->
+        var lastDay: String? = null
+        data.forEach { (rec, events) ->
+            // Rubrik för varje ny dag
+            if (rec.day != lastDay) {
+                lastDay = rec.day
+                list.addView(label(dayFmt.format(java.time.LocalDate.parse(rec.day)).replaceFirstChar { it.titlecase(loc) },
+                    R.color.gold, 13f, bold = true).apply { setPadding(0, (14 * d).toInt(), 0, 0) })
+            }
             val card = android.widget.LinearLayout(this).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
                 background = ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_card)
@@ -642,17 +660,16 @@ class MainActivity : BaseActivity() {
                 layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { topMargin = (10 * d).toInt() }
             }
             list.addView(card)
-            card.addView(label(dayFmt.format(java.time.LocalDate.parse(day.day)).replaceFirstChar { it.titlecase(loc) },
-                R.color.ink, 15f, bold = true))
-            card.addView(label(tr(R.string.log_day_summary, day.measurements, day.cells,
-                hm.format(Instant.ofEpochMilli(day.firstTs)), hm.format(Instant.ofEpochMilli(day.lastTs))),
-                R.color.muted, 12.5f))
+            card.addView(Recordings.pills(this, rec))
+            card.addView(label(tr(R.string.log_day_summary, rec.measurements, rec.cells,
+                hm.format(Instant.ofEpochMilli(rec.from)), hm.format(Instant.ofEpochMilli(rec.to))),
+                R.color.muted, 12.5f).apply { setPadding(0, (6 * d).toInt(), 0, 0) })
 
-            card.addView(label(getString(R.string.replay_whole_day), R.color.mint, 14f, bold = true).apply {
+            card.addView(label(getString(R.string.replay_recording), R.color.mint, 14f, bold = true).apply {
                 minHeight = (44 * d).toInt()
                 gravity = android.view.Gravity.CENTER_VERTICAL
                 background = ContextCompat.getDrawable(this@MainActivity, android.R.drawable.list_selector_background)
-                setOnClickListener { hidePicker(); startReplay(day.day) }
+                setOnClickListener { hidePicker(); startReplay(rec) }
             })
 
             events.forEach { f ->
@@ -675,7 +692,7 @@ class MainActivity : BaseActivity() {
                             R.color.muted, 12f))
                     })
                     addView(label("▶", R.color.gold, 16f).apply { setPadding((8 * d).toInt(), 0, 0, 0) })
-                    setOnClickListener { hidePicker(); startReplay(day.day, f.ts) }
+                    setOnClickListener { hidePicker(); startReplay(rec, f.ts) }
                 })
             }
         }
@@ -703,7 +720,7 @@ class MainActivity : BaseActivity() {
     private var savedZoom = 0.0
     private var savedCenter: GeoPoint? = null
 
-    private fun startReplay(day: String, startAt: Long? = null) {
+    private fun startReplay(rec: Recording, startAt: Long? = null) {
         refreshJob?.cancel()
         if (!replay.active) {
             savedZoom = map.zoomLevelDouble
@@ -711,7 +728,7 @@ class MainActivity : BaseActivity() {
         }
         showReplayMode(true)
         replayBack.isEnabled = true
-        replay.open(day, startAt)
+        replay.open(rec.from, rec.to + 1000L, Recordings.title(this, rec), startAt)
     }
 
     /** Under uppspelning: Live-knappen ersätter teckenförklaringen och panelen nertill göms. */

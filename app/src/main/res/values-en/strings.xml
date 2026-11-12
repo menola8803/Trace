@@ -133,6 +133,15 @@
     <string name="storage_deleted">%1$d files were removed.</string>
     <string name="storage_delete_failed">Could not remove the files: %1$s</string>
 
+    <string name="rec_live">Live recording</string>
+    <string name="rec_scheduled">Scheduled recording</string>
+    <string name="rec_earlier">Earlier recording</string>
+    <string name="rec_tri">Triangulation</string>
+    <string name="replay_recording">▶  Replay the recording</string>
+    <string name="log_filter_all">All</string>
+    <string name="log_filter_live">Live</string>
+    <string name="log_filter_scheduled">Scheduled</string>
+    <string name="log_filter_none">No recordings of that kind yet.</string>
     <string name="log_title">Daily log</string>
     <string name="log_empty">Nothing logged yet. Start monitoring on the map, and the measurements are collected here day by day.</string>
     <string name="log_day_summary">%1$,d measurements · %2$d cells · %3$s–%4$s</string>
@@ -290,7 +299,7 @@
     <string name="theme_dark">Dark</string>
     <string name="theme_beige">Beige</string>
     <string name="settings_sub">Language, appearance, recording and updates</string>
-    <string name="log_sub">Everything recorded, day by day</string>
+    <string name="log_sub">Every recording, day by day</string>
     <string name="about_sub">Developer and version</string>
 
     <string name="tri_section">TRIANGULATION</string>
