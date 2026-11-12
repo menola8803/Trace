@@ -76,6 +76,9 @@ class MainActivity : BaseActivity() {
     companion object {
         const val EXTRA_LAT = "se.cellkarta.LAT"
         const val EXTRA_LON = "se.cellkarta.LON"
+        private const val STATE_ZOOM = "map_zoom"
+        private const val STATE_LAT = "map_lat"
+        private const val STATE_LON = "map_lon"
         const val EXTRA_REPLAY_FROM = "se.cellkarta.REPLAY_FROM"
         const val EXTRA_REPLAY_TO = "se.cellkarta.REPLAY_TO"
         const val EXTRA_REPLAY_KIND = "se.cellkarta.REPLAY_KIND"
@@ -193,6 +196,14 @@ class MainActivity : BaseActivity() {
 
         applyInsets()
         setupMap()
+        // Byte av tema eller språk bygger om skärmen: behåll samma utsnitt och zoom
+        savedInstanceState?.let { st ->
+            if (st.containsKey(STATE_ZOOM)) {
+                centeredOnUser = true
+                map.controller.setZoom(st.getDouble(STATE_ZOOM))
+                map.controller.setCenter(GeoPoint(st.getDouble(STATE_LAT), st.getDouble(STATE_LON)))
+            }
+        }
 
         findViewById<View>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
@@ -279,6 +290,18 @@ class MainActivity : BaseActivity() {
         findViewById<TextView>(R.id.legend).text = legendText()
         map.onResume()
         enableMyLocation()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Under uppspelning sparas Live-kartans utsnitt, som man kommer tillbaka till
+        val center = if (replay.active) savedCenter else GeoPoint(map.mapCenter.latitude, map.mapCenter.longitude)
+        val zoom = if (replay.active) savedZoom else map.zoomLevelDouble
+        if (center != null && zoom > 0) {
+            outState.putDouble(STATE_ZOOM, zoom)
+            outState.putDouble(STATE_LAT, center.latitude)
+            outState.putDouble(STATE_LON, center.longitude)
+        }
     }
 
     override fun onPause() {
