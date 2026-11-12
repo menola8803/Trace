@@ -116,5 +116,16 @@ object TraceFiles {
         return removed
     }
 
+    /** Skriver en hel fil i Download/Trace. Finns den redan skrivs den över. Returnerar filnamnet, eller null. */
+    @Synchronized
+    fun writeFile(ctx: Context, name: String, text: String): String? {
+        return runCatching {
+            val uri = find(ctx, name) ?: create(ctx, name, "text/csv") ?: error("Kunde inte skapa $name")
+            uris.remove(name)
+            ctx.contentResolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray()) } ?: error("Kunde inte öppna $name")
+            name
+        }.onFailure { Log.w(TAG, "Kunde inte skriva $name", it) }.getOrNull()
+    }
+
     fun dayFiles(day: LocalDate) = listOf(measurementFile(day.toString()), eventFile(day.toString()))
 }

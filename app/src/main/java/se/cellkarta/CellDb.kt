@@ -567,6 +567,9 @@ class CellDb private constructor(ctx: Context) :
             arrayOf((s - mLat).toString(), (n + mLat).toString(), (w - mLon).toString(), (e + mLon).toString()))
     }
 
+    /** Alla hittade master, säkrast först. */
+    fun allFound(): List<Triangulate.Result> = readFound("ORDER BY quality DESC, radius ASC", emptyArray())
+
     fun found(siteKey: String): Triangulate.Result? = readFound("WHERE site_key=?", arrayOf(siteKey)).firstOrNull()
 
     fun foundCount(): Long = DatabaseUtils.queryNumEntries(readableDatabase, "found_masts")

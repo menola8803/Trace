@@ -69,6 +69,10 @@
             android:label="Om Trace" />
 
         <activity
+            android:name=".FoundMastsActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".AppTrafficActivity"
             android:exported="false" />
 

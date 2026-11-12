@@ -76,6 +76,9 @@ class MainActivity : BaseActivity() {
     companion object {
         const val EXTRA_LAT = "se.cellkarta.LAT"
         const val EXTRA_LON = "se.cellkarta.LON"
+        const val EXTRA_ZOOM = "se.cellkarta.ZOOM"
+        /** Markeringen vars ruta ska öppnas, till exempel "tri:LTE:240:7:331321". */
+        const val EXTRA_OPEN = "se.cellkarta.OPEN"
         private const val STATE_ZOOM = "map_zoom"
         private const val STATE_LAT = "map_lat"
         private const val STATE_LON = "map_lon"
@@ -284,10 +287,12 @@ class MainActivity : BaseActivity() {
         val lon = intent.getDoubleExtra(EXTRA_LON, Double.NaN)
         if (lat.isNaN() || lon.isNaN()) return
         centeredOnUser = true
-        map.controller.setZoom(15.0)
+        map.controller.setZoom(intent.getDoubleExtra(EXTRA_ZOOM, 15.0))
         map.controller.setCenter(GeoPoint(lat, lon))
+        intent.getStringExtra(EXTRA_OPEN)?.let { bubble.openKey = it }
         intent.removeExtra(EXTRA_LAT)
         intent.removeExtra(EXTRA_LON)
+        intent.removeExtra(EXTRA_OPEN)
         scheduleRefresh(0)
     }
 
@@ -519,6 +524,7 @@ class MainActivity : BaseActivity() {
         PopupMenu(this, anchor).apply {
             menu.add(0, 7, 0, R.string.menu_replay)
             menu.add(0, 6, 0, R.string.menu_log)
+            if (Prefs.triMode(this@MainActivity) != Prefs.TRI_OFF) menu.add(0, 9, 0, R.string.menu_masts)
             if (Prefs.appTraffic(this@MainActivity)) menu.add(0, 8, 0, R.string.menu_traffic)
             menu.add(0, 5, 1, R.string.settings)
             menu.add(0, 1, 2, R.string.menu_download)
@@ -529,6 +535,7 @@ class MainActivity : BaseActivity() {
                 when (item.itemId) {
                     7 -> chooseReplayDay()
                     8 -> startActivity(Intent(this@MainActivity, AppTrafficActivity::class.java))
+                    9 -> startActivity(Intent(this@MainActivity, FoundMastsActivity::class.java))
                     6 -> startActivity(Intent(this@MainActivity, LogActivity::class.java))
                     5 -> startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
                     1 -> downloadSweden()
