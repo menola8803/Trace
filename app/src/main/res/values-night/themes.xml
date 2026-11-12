@@ -13,6 +13,8 @@
         <item name="android:fontFamily">@font/jakarta</item>
         <item name="android:buttonStyle">@style/Trace.Button</item>
         <item name="android:alertDialogTheme">@style/Trace.Dialog</item>
+        <item name="android:timePickerDialogTheme">@style/Trace.Dialog.TimePicker</item>
+        <item name="android:dialogTheme">@style/Trace.Dialog</item>
         <item name="android:popupMenuStyle">@style/Trace.PopupMenu</item>
         <item name="android:textAppearanceLargePopupMenu">@style/Trace.PopupMenuText</item>
         <item name="android:textAppearanceSmallPopupMenu">@style/Trace.PopupMenuText</item>
@@ -56,6 +58,47 @@
         <item name="android:textColorPrimary">@color/ink</item>
         <item name="android:textColorSecondary">@color/muted</item>
         <item name="android:fontFamily">@font/jakarta</item>
+        <item name="android:windowTitleStyle">@style/Trace.DialogTitle</item>
+        <item name="android:buttonBarButtonStyle">@style/Trace.DialogButton</item>
+        <item name="android:buttonBarStyle">@style/Trace.DialogButtonBar</item>
+        <item name="android:colorBackground">@color/card</item>
+    </style>
+
+    <style name="Trace.DialogTitle" parent="android:TextAppearance.Material.DialogWindowTitle">
+        <item name="android:fontFamily">@font/jakarta_bold</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">19sp</item>
+    </style>
+
+    <!-- Knapparna i frågerutor: rundade som i Settings, utan versaler -->
+    <style name="Trace.DialogButton" parent="android:Widget.Material.Button.Borderless.Colored">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/jakarta_bold</item>
+        <item name="android:textColor">@color/gold</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:background">@drawable/bg_dialog_button</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+    </style>
+
+    <style name="Trace.DialogButtonBar" parent="android:Widget.Material.ButtonBar.AlertDialog">
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingBottom">10dp</item>
+    </style>
+
+    <!-- Tidsväljaren för schemalagd inspelning -->
+    <style name="Trace.Dialog.TimePicker">
+        <item name="android:timePickerStyle">@style/Trace.TimePicker</item>
+    </style>
+
+    <style name="Trace.TimePicker" parent="android:Widget.Material.TimePicker">
+        <item name="android:headerBackground">@color/card</item>
+        <item name="android:numbersBackgroundColor">@color/bg</item>
+        <item name="android:numbersSelectorColor">@color/gold</item>
+        <item name="android:numbersTextColor">@color/ink</item>
+        <item name="android:amPmBackgroundColor">@color/gold</item>
     </style>
 
     <!-- Systemets startskärm, som sedan går över i Trace egna animerade startskärm -->
