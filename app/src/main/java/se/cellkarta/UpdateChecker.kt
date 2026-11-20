@@ -96,10 +96,17 @@ object UpdateChecker {
     private fun notesOf(body: String): List<String> {
         val part = body.substringAfter("Ändringar:", "")
         if (part.isBlank()) return emptyList()
-        return part.lines().map { it.trim() }
-            .filter { it.isNotEmpty() && !it.startsWith("Co-Authored-By") && !it.startsWith("Claude-Session") }
-            .map { it.removePrefix("- ").removePrefix("* ").replace("`", "") }
-            .take(10)
+        // Rubriken först, sedan en rad per punkt. Rader som fortsätter en punkt läggs ihop med den.
+        val out = ArrayList<String>()
+        for (raw in part.lines()) {
+            val line = raw.trim()
+            if (line.isEmpty() || line.startsWith("Co-Authored-By") || line.startsWith("Claude-Session")) continue
+            val bullet = line.startsWith("- ") || line.startsWith("* ")
+            val text = line.removePrefix("- ").removePrefix("* ").replace("`", "")
+            if (!bullet && out.size > 1 && raw.startsWith(" ")) out[out.size - 1] = out.last() + " " + text
+            else out.add(text)
+        }
+        return out.take(10)
     }
 
     data class Change(val date: String, val title: String)
