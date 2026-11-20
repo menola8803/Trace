@@ -65,7 +65,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN: ${{ github.run_number }}
         run: |
-          NOTES=$(printf 'Version: 0.1.%s\nBuild: %s\nSignerad med fast nyckel: %s\n\nÖppna den här sidan på telefonen, ladda ner Trace.apk och installera.\nByggd från %s.' "$RUN" "$RUN" "$SIGNED" "${GITHUB_SHA::7}")
+          CHANGES=$(git log -1 --format=%B | sed '/^Co-Authored-By/d;/^Claude-Session/d' | sed '/^[[:space:]]*$/d')
+          NOTES=$(printf 'Version: 0.1.%s\nBuild: %s\nSignerad med fast nyckel: %s\n\nÖppna den här sidan på telefonen, ladda ner Trace.apk och installera.\nByggd från %s.\n\nÄndringar:\n%s' "$RUN" "$RUN" "$SIGNED" "${GITHUB_SHA::7}" "$CHANGES")
           gh release delete senaste --yes --cleanup-tag || true
           gh release create senaste Trace.apk \
             --latest \

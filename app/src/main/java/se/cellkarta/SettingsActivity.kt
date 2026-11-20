@@ -20,7 +20,9 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,6 +31,12 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 class SettingsActivity : BaseActivity() {
+
+    companion object {
+        /** Öppna inställningarna och ladda ner och installera den nya versionen direkt. */
+        const val EXTRA_INSTALL = "se.cellkarta.INSTALL_UPDATE"
+    }
+
 
     private val fmt by lazy {
         DateTimeFormatter.ofPattern("d MMM yyyy HH:mm", Lang.locale(this)).withZone(ZoneId.systemDefault())
@@ -160,8 +168,21 @@ class SettingsActivity : BaseActivity() {
         btnCheck = findViewById(R.id.btnCheckUpdate)
         btnCheck.setOnClickListener {
             val r = latest
-            if (r != null && r.build > UpdateChecker.currentBuild(this)) UpdateChecker.open(this, r.apkUrl)
-            else checkNow()
+            if (r != null && r.build > UpdateChecker.currentBuild(this)) {
+                // Som i CamOne: ladda ner, kontrollera och installera inne i appen
+                if (r.hasApk) UpdateInstaller.downloadAndInstall(this, r) else UpdateChecker.open(this, r.pageUrl)
+            } else checkNow()
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) { UpdateInstaller.state.collect { showDownload(it) } }
+        }
+        // Från rutan "Ny version" på kartan: sök och installera direkt
+        if (intent.getBooleanExtra(EXTRA_INSTALL, false)) {
+            intent.removeExtra(EXTRA_INSTALL)
+            checkNow(install = true)
+            findViewById<View>(R.id.btnCheckUpdate).post {
+                findViewById<android.widget.ScrollView>(R.id.settingsRoot).smoothScrollTo(0, findViewById<View>(R.id.versionValue).top)
+            }
         }
         findViewById<Switch>(R.id.switchAutoUpdate).apply {
             isChecked = Prefs.autoUpdate(this@SettingsActivity)
@@ -299,13 +320,82 @@ class SettingsActivity : BaseActivity() {
         }
     }
 
+    /** Den nya versionen: ändringar, storlek och när den publicerades. */
+    private fun showRelease(r: UpdateChecker.Release) {
+        findViewById<View>(R.id.updateNew).visibility = View.VISIBLE
+        findViewById<TextView>(R.id.updateNewTitle).text = tr(R.string.update_new_title, r.versionName)
+        val published = runCatching { fmt.format(Instant.parse(r.publishedAt)) }.getOrDefault(r.publishedAt)
+        val size = if (r.size > 0) android.text.format.Formatter.formatShortFileSize(this, r.size) else "–"
+        findViewById<TextView>(R.id.updateNewMeta).text =
+            tr(R.string.update_new_meta, UpdateChecker.currentVersionName(this), size, published)
+        val notes = findViewById<LinearLayout>(R.id.updateNotes)
+        notes.removeAllViews()
+        r.notes.forEachIndexed { i, line ->
+            notes.addView(TextView(this).apply {
+                text = if (i == 0) line else "•  $line"
+                textSize = if (i == 0) 13.5f else 13f
+                setTextColor(ContextCompat.getColor(this@SettingsActivity, if (i == 0) R.color.ink else R.color.muted))
+                if (i == 0) typeface = androidx.core.content.res.ResourcesCompat.getFont(this@SettingsActivity, R.font.jakarta_bold)
+                setPadding(0, (3 * resources.displayMetrics.density).toInt(), 0, 0)
+            })
+        }
+    }
+
+    /** Nedladdningens förlopp och resultat. */
+    private fun showDownload(st: UpdateInstaller.State) {
+        val bar = findViewById<android.widget.ProgressBar>(R.id.updateProgress)
+        val line = findViewById<TextView>(R.id.updateDlStatus)
+        val name = latest?.versionName.orEmpty()
+        fun say(text: String?, color: Int = R.color.muted) {
+            line.visibility = if (text == null) View.GONE else View.VISIBLE
+            line.text = text
+            line.setTextColor(ContextCompat.getColor(this, color))
+        }
+        bar.visibility = if (st is UpdateInstaller.State.Downloading) View.VISIBLE else View.GONE
+        when (st) {
+            UpdateInstaller.State.None -> say(null)
+            is UpdateInstaller.State.Downloading -> {
+                bar.isIndeterminate = st.progress < 0
+                if (st.progress >= 0) bar.progress = (st.progress * 1000).toInt()
+                say(if (st.progress >= 0) tr(R.string.update_downloading_pct, (st.progress * 100).toInt()) else getString(R.string.update_downloading))
+                btnCheck.isEnabled = false
+            }
+            is UpdateInstaller.State.Ready -> {
+                say(getString(if (st.verified) R.string.update_verified else R.string.update_downloaded), R.color.mint)
+                btnCheck.isEnabled = true
+                if (name.isNotEmpty()) btnCheck.text = tr(R.string.update_install_again, name)
+            }
+            UpdateInstaller.State.NeedsPermission -> {
+                say(getString(R.string.update_allow), R.color.gold)
+                btnCheck.isEnabled = true
+            }
+            is UpdateInstaller.State.Failed -> {
+                say(getString(when (st.error) {
+                    UpdateInstaller.Error.NETWORK -> R.string.update_err_network
+                    UpdateInstaller.Error.CHECKSUM -> R.string.update_err_checksum
+                    UpdateInstaller.Error.WRONG_PACKAGE -> R.string.update_err_package
+                    UpdateInstaller.Error.NOT_NEWER -> R.string.update_err_not_newer
+                    UpdateInstaller.Error.SIGNATURE -> R.string.update_err_signature
+                    UpdateInstaller.Error.INSTALL -> R.string.update_err_install
+                }), R.color.danger)
+                btnCheck.isEnabled = true
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Tillbaka från Androids inställning för att installera appar
+        UpdateInstaller.resumeAfterPermission(this)
+    }
+
     private fun showLastCheck() {
         val ts = Prefs.lastUpdateCheck(this)
         updateStatus.text = if (ts == 0L) getString(R.string.update_never)
         else tr(R.string.update_last, fmt.format(Instant.ofEpochMilli(ts)))
     }
 
-    private fun checkNow() {
+    private fun checkNow(install: Boolean = false) {
         btnCheck.isEnabled = false
         updateStatus.text = getString(R.string.update_searching)
         lifecycleScope.launch {
@@ -315,10 +405,14 @@ class SettingsActivity : BaseActivity() {
                 Prefs.setLastUpdateCheck(this@SettingsActivity, System.currentTimeMillis())
                 if (r.build > UpdateChecker.currentBuild(this@SettingsActivity)) {
                     updateStatus.text = tr(R.string.update_available, r.versionName)
-                    btnCheck.text = tr(R.string.update_download, r.versionName)
+                    btnCheck.text = tr(R.string.update_install, r.versionName)
+                    showRelease(r)
+                    if (install && r.hasApk) UpdateInstaller.downloadAndInstall(this@SettingsActivity, r)
                 } else {
                     updateStatus.text = getString(R.string.update_latest)
                     btnCheck.setText(R.string.update_check)
+                    findViewById<View>(R.id.updateNew).visibility = View.GONE
+                    UpdateInstaller.reset()
                 }
             } catch (e: Exception) {
                 updateStatus.text = e.message ?: getString(R.string.update_no_net)

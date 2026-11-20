@@ -139,6 +139,38 @@
             <TextView style="@style/Trace.Label" android:text="@string/version" />
             <TextView android:id="@+id/versionValue" style="@style/Trace.Value" android:textSize="18sp" />
             <TextView android:id="@+id/updateStatus" style="@style/Trace.Label" android:layout_marginTop="10dp" />
+
+            <!-- Ny version: ändringar, storlek och nedladdning, som i CamOne -->
+            <LinearLayout
+                android:id="@+id/updateNew"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card_inner"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone">
+                <TextView android:id="@+id/updateNewTitle" style="@style/Trace.Label" android:fontFamily="@font/jakarta_bold" android:textColor="@color/gold" android:textSize="15sp" />
+                <TextView android:id="@+id/updateNewMeta" style="@style/Trace.Label" android:layout_marginTop="2dp" android:textSize="12sp" />
+                <LinearLayout
+                    android:id="@+id/updateNotes"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="vertical" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/updateProgress"
+                style="@android:style/Widget.Material.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:max="1000"
+                android:progressTint="@color/gold"
+                android:progressBackgroundTint="@color/line"
+                android:visibility="gone" />
+            <TextView android:id="@+id/updateDlStatus" style="@style/Trace.Label" android:layout_marginTop="6dp" android:textSize="13sp" android:visibility="gone" />
             <Button
                 android:id="@+id/btnCheckUpdate"
                 style="@style/Trace.Button.Primary"

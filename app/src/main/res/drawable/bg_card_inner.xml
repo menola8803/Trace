@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ruta inne i ett kort, till exempel den nya versionen under Updates -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/bg" />
+    <corners android:radius="14dp" />
+    <stroke android:width="1dp" android:color="@color/line" />
+</shape>

@@ -506,13 +506,17 @@ class MainActivity : BaseActivity() {
 
     /** Söker efter ny version högst en gång per dygn, om det är påslaget i inställningarna. */
     private fun autoCheckForUpdate() {
+        // Första starten efter en uppdatering: säg vilken version det blev
+        UpdateRestart.consumeJustUpdated(this)?.let { toast(tr(R.string.update_just_updated, it)) }
         if (!Prefs.autoUpdate(this)) return
         if (System.currentTimeMillis() - Prefs.lastUpdateCheck(this) < 24 * 3_600_000L) return
         lifecycleScope.launch {
             val latest = try { UpdateChecker.latest(this@MainActivity) } catch (e: Exception) { return@launch }
             Prefs.setLastUpdateCheck(this@MainActivity, System.currentTimeMillis())
             if (latest.build > UpdateChecker.currentBuild(this@MainActivity)) {
-                UpdateChecker.offer(this@MainActivity, latest)
+                UpdateChecker.offer(this@MainActivity, latest) {
+                    startActivity(Intent(this@MainActivity, SettingsActivity::class.java).putExtra(SettingsActivity.EXTRA_INSTALL, true))
+                }
             }
         }
     }

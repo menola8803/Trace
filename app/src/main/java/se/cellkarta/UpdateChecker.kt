@@ -29,6 +29,14 @@ object UpdateChecker {
         val apkUrl: String,
         val pageUrl: String,
         val publishedAt: String,
+        /** Filens storlek i byte, 0 om okänd. */
+        val size: Long = 0L,
+        /** SHA-256 i hex som GitHub räknat ut för filen, om den finns. */
+        val sha256: String? = null,
+        /** Ändringarna i versionen, en rad per punkt. */
+        val notes: List<String> = emptyList(),
+        /** Sant om apkUrl pekar direkt på APK-filen. */
+        val hasApk: Boolean = false,
     )
 
     fun currentBuild(ctx: Context): Long {
@@ -59,21 +67,39 @@ object UpdateChecker {
             val name = Regex("""Version:\s*([\w.\-]+)""").find(body)?.groupValues?.get(1) ?: "build $build"
 
             val assets = json.optJSONArray("assets")
-            var apk: String? = null
+            var apk: JSONObject? = null
             if (assets != null) {
                 for (i in 0 until assets.length()) {
                     val a = assets.getJSONObject(i)
                     if (a.optString("name").endsWith(".apk")) {
-                        apk = a.optString("browser_download_url")
+                        apk = a
                         break
                     }
                 }
             }
             val page = json.optString("html_url", "$REPO_URL/releases")
-            Release(build, name, apk ?: page, page, json.optString("published_at"))
+            val apkUrl = apk?.optString("browser_download_url")?.takeIf { it.isNotBlank() }
+            val digest = apk?.optString("digest").orEmpty()
+            Release(
+                build, name, apkUrl ?: page, page, json.optString("published_at"),
+                size = apk?.optLong("size") ?: 0L,
+                sha256 = digest.takeIf { it.startsWith("sha256:") }?.removePrefix("sha256:")?.lowercase(),
+                notes = notesOf(body),
+                hasApk = apkUrl != null,
+            )
         } finally {
             conn.disconnect()
         }
+    }
+
+    /** Ändringarna ur release-texten: rubriken och punkterna under "Ändringar:". */
+    private fun notesOf(body: String): List<String> {
+        val part = body.substringAfter("Ändringar:", "")
+        if (part.isBlank()) return emptyList()
+        return part.lines().map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("Co-Authored-By") && !it.startsWith("Claude-Session") }
+            .map { it.removePrefix("- ").removePrefix("* ").replace("`", "") }
+            .take(10)
     }
 
     data class Change(val date: String, val title: String)
@@ -102,12 +128,12 @@ object UpdateChecker {
         }
     }
 
-    /** Frågar om användaren vill hämta den nya versionen. Nedladdningen sker i webbläsaren. */
-    fun offer(ctx: Context, release: Release) {
+    /** Frågar om användaren vill installera den nya versionen. Nedladdningen sker inne i appen. */
+    fun offer(ctx: Context, release: Release, onInstall: () -> Unit) {
         AlertDialog.Builder(ctx)
             .setTitle(R.string.update_dialog_title)
             .setMessage(ctx.tr(R.string.update_dialog_message, release.versionName, currentVersionName(ctx)))
-            .setPositiveButton(ctx.tr(R.string.update_download, release.versionName)) { _, _ -> open(ctx, release.apkUrl) }
+            .setPositiveButton(ctx.tr(R.string.update_install, release.versionName)) { _, _ -> onInstall() }
             .setNegativeButton(R.string.update_later, null)
             .show()
     }
